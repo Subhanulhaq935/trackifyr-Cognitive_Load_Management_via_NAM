@@ -11,6 +11,11 @@ from datetime import datetime
 from threading import Thread, Lock
 from pynput import mouse, keyboard
 try:
+    import cv2
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+try:
     import pyautogui
     PYAutoGUI_AVAILABLE = True
 except ImportError:
@@ -26,7 +31,12 @@ class FilteredStderr:
     def write(self, s):
         self.buffer += s
         # Check if this is a pynput error we want to suppress
-        if "Unhandled exception in listener callback" in self.buffer:
+        if (
+            "Unhandled exception in listener callback" in self.buffer
+            or "_thread._ThreadHandle" in self.buffer
+            or "'_thread._ThreadHandle' object is not callable" in self.buffer
+        ):
+            # Suppress the whole traceback block related to this error
             self.suppress_next = True
         
         # If we have a complete line, process it
@@ -34,12 +44,20 @@ class FilteredStderr:
             lines = self.buffer.split("\n")
             for line in lines[:-1]:
                 # Suppress pynput-related errors
-                if not (self.suppress_next or 
-                       ("pynput" in line.lower() and 
-                        ("NotImplementedError" in line or 
-                         "TypeError" in line or 
-                         "_ThreadHandle" in line or
-                         "Traceback" in line))):
+                if not (
+                    self.suppress_next
+                    or "_thread._ThreadHandle" in line
+                    or "'_thread._ThreadHandle' object is not callable" in line
+                    or (
+                        "pynput" in line.lower()
+                        and (
+                            "NotImplementedError" in line
+                            or "TypeError" in line
+                            or "_ThreadHandle" in line
+                            or "Traceback" in line
+                        )
+                    )
+                ):
                     self.original_stderr.write(line + "\n")
                 # Reset suppress flag after processing a traceback block
                 if line.strip() == "" and self.suppress_next:
@@ -48,9 +66,17 @@ class FilteredStderr:
     
     def flush(self):
         if self.buffer and not self.suppress_next:
-            if not ("pynput" in self.buffer.lower() and 
-                   ("NotImplementedError" in self.buffer or 
-                    "TypeError" in self.buffer)):
+            if not (
+                "_thread._ThreadHandle" in self.buffer
+                or "'_thread._ThreadHandle' object is not callable" in self.buffer
+                or (
+                    "pynput" in self.buffer.lower()
+                    and (
+                        "NotImplementedError" in self.buffer
+                        or "TypeError" in self.buffer
+                    )
+                )
+            ):
                 self.original_stderr.write(self.buffer)
         self.original_stderr.flush()
         self.buffer = ""
@@ -70,8 +96,14 @@ class ActivityTracker:
         self.last_activity_time = None
         self.is_active = False
         
-        # Track active seconds (set of second timestamps)
+        # Track active seconds (set of second timestamps) for the current window
         self.active_seconds = set()
+        # Track all active seconds for the whole session (deterministic second buckets)
+        self.global_active_seconds = set()
+        # Optional raw counts per second for analytics: {second_ts: {"mouse": int, "keyboard": int}}
+        self.per_second_counts = {}
+        # Aggregated active seconds per minute bucket: {minute_index: int}
+        self.per_minute_active_seconds = {}
         
         # Thread safety
         self.lock = Lock()
@@ -85,6 +117,25 @@ class ActivityTracker:
         self.mouse_polling_thread = None
         self.polling_active = False
         
+        # Facecam
+        self.camera_active = False
+        self.camera_thread = None
+    
+    def _mark_second_active(self, second_ts: int) -> None:
+        """
+        Mark a given second as active in both the current window and session-level
+        aggregates. Multiple events within the same second are collapsed into one.
+        """
+        # For current reporting window
+        self.active_seconds.add(second_ts)
+        # For whole session
+        if second_ts not in self.global_active_seconds:
+            self.global_active_seconds.add(second_ts)
+            # Increment the corresponding minute bucket once per active second
+            minute_index = second_ts // 60
+            current = self.per_minute_active_seconds.get(minute_index, 0)
+            self.per_minute_active_seconds[minute_index] = current + 1
+        
     def on_mouse_move(self, x, y):
         """Track mouse movement - called on every mouse movement"""
         try:
@@ -93,8 +144,14 @@ class ActivityTracker:
             # Use lock for thread safety
             with self.lock:
                 self.mouse_events += 1
+                # Update raw per-second counts for analytics
+                bucket = self.per_second_counts.get(current_second)
+                if bucket is None:
+                    bucket = {"mouse": 0, "keyboard": 0}
+                    self.per_second_counts[current_second] = bucket
+                bucket["mouse"] += 1
                 # Mark the current second as active (using integer timestamp)
-                self.active_seconds.add(current_second)
+                self._mark_second_active(current_second)
                 self.last_activity_time = current_time
                 self.is_active = True
         except Exception:
@@ -108,8 +165,14 @@ class ActivityTracker:
             current_second = int(current_time)
             with self.lock:
                 self.mouse_events += 1
+                # Update raw per-second counts for analytics
+                bucket = self.per_second_counts.get(current_second)
+                if bucket is None:
+                    bucket = {"mouse": 0, "keyboard": 0}
+                    self.per_second_counts[current_second] = bucket
+                bucket["mouse"] += 1
                 # Mark the current second as active (using integer timestamp)
-                self.active_seconds.add(current_second)
+                self._mark_second_active(current_second)
                 self.last_activity_time = current_time
                 self.is_active = True
         except Exception:
@@ -131,7 +194,13 @@ class ActivityTracker:
                         self.mouse_events += 1
                         current_time = time.time()
                         current_second = int(current_time)
-                        self.active_seconds.add(current_second)
+                        # Update raw per-second counts for analytics
+                        bucket = self.per_second_counts.get(current_second)
+                        if bucket is None:
+                            bucket = {"mouse": 0, "keyboard": 0}
+                            self.per_second_counts[current_second] = bucket
+                        bucket["mouse"] += 1
+                        self._mark_second_active(current_second)
                         self.last_activity_time = current_time
                         self.is_active = True
                         self.last_mouse_pos = current_pos
@@ -148,45 +217,143 @@ class ActivityTracker:
                 current_time = time.time()
                 # Mark the current second as active (using integer timestamp)
                 current_second = int(current_time)
-                self.active_seconds.add(current_second)
+                # Update raw per-second counts for analytics
+                bucket = self.per_second_counts.get(current_second)
+                if bucket is None:
+                    bucket = {"mouse": 0, "keyboard": 0}
+                    self.per_second_counts[current_second] = bucket
+                bucket["keyboard"] += 1
+                self._mark_second_active(current_second)
                 self.last_activity_time = current_time
                 self.is_active = True
         except Exception:
             pass  # Silently ignore errors
     
-    def calculate_activity_percentage(self, active_time, total_time):
-        """Calculate activity percentage"""
-        if total_time == 0:
+    def capture_facecam(self):
+        """Capture and display facecam video while tracking is running."""
+        if not OPENCV_AVAILABLE:
+            print("Facecam: OpenCV (cv2) is not available, skipping camera.")
+            return
+        
+        cap = None
+        try:
+            cap = cv2.VideoCapture(0)
+            if not cap.isOpened():
+                print("Facecam: Unable to access the default camera.")
+                return
+            
+            cv2.namedWindow("Facecam", cv2.WINDOW_NORMAL)
+            self.camera_active = True
+            
+            while self.camera_active:
+                ret, frame = cap.read()
+                if not ret:
+                    print("Facecam: Failed to read frame from camera.")
+                    break
+                
+                cv2.imshow("Facecam", frame)
+                # Press 'q' while the Facecam window is focused to close it
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    self.camera_active = False
+                    break
+        except Exception as e:
+            print(f"Facecam: Error occurred ({e})")
+        finally:
+            if cap is not None:
+                cap.release()
+            try:
+                cv2.destroyWindow("Facecam")
+            except Exception:
+                try:
+                    cv2.destroyAllWindows()
+                except Exception:
+                    pass
+    
+    def calculate_activity_percentage(self, active_seconds, window_seconds):
+        """
+        Calculate activity percentage for a fixed-size window in seconds.
+        For per-minute summaries, window_seconds should be 60.
+        """
+        if window_seconds <= 0:
             return 0.0
-        return (active_time / total_time) * 100
+        return (active_seconds / window_seconds) * 100.0
+    
+    def get_minute_summary(self, minute_index: int):
+        """
+        Get a deterministic per-minute summary bucket.
+        
+        minute_index is the integer division of a unix second by 60
+        (i.e. minute_index = second_ts // 60).
+        """
+        with self.lock:
+            active_seconds = self.per_minute_active_seconds.get(minute_index, 0)
+            window_seconds = 60
+            percentage = self.calculate_activity_percentage(active_seconds, window_seconds)
+            minute_start_ts = minute_index * 60
+            return {
+                "minute_index": minute_index,
+                "minute_start_epoch": minute_start_ts,
+                "active_seconds": active_seconds,
+                "activity_percentage": percentage,
+                "window_seconds": window_seconds,
+            }
+    
+    def get_overall_summary(self, session_start_ts: float, session_end_ts: float):
+        """
+        Overall summary across an arbitrary session window.
+        Uses second-level buckets and is safe for long durations.
+        """
+        with self.lock:
+            start_second = int(session_start_ts)
+            end_second = int(session_end_ts)
+            if end_second < start_second:
+                end_second = start_second
+            total_seconds = (end_second - start_second) + 1
+            
+            active_seconds = 0
+            for sec in range(start_second, end_second + 1):
+                if sec in self.global_active_seconds:
+                    active_seconds += 1
+            
+            percentage = self.calculate_activity_percentage(active_seconds, total_seconds)
+            return {
+                "session_start_epoch": start_second,
+                "session_end_epoch": end_second,
+                "total_seconds": total_seconds,
+                "active_seconds": active_seconds,
+                "activity_percentage": percentage,
+            }
     
     def generate_summary(self, session_start, session_end):
-        """Generate and print activity summary"""
+        """Generate and print activity summary for the last interval."""
         with self.lock:
-            total_time = session_end - session_start
-            
-            # Count active seconds within the session period
-            # Use floor for start and ceil for end to include partial seconds
+            # Fix the reporting window to the configured interval size (e.g. 10s)
+            # regardless of small timing jitter, so percentages are always
+            # based on exactly `self.interval_seconds` seconds.
             session_start_second = int(session_start)
-            session_end_second = int(session_end) + 1  # Include the second that session_end falls in
+            window_seconds = int(self.interval_seconds)
+            session_end_second = session_start_second + window_seconds - 1
             
             # Count how many seconds in the session had activity
             active_seconds_count = 0
-            for second in range(session_start_second, session_end_second):
+            for second in range(session_start_second, session_end_second + 1):
                 if second in self.active_seconds:
                     active_seconds_count += 1
             
-            # Active time is the number of active seconds
+            # Active time is the number of active seconds in this window
             active_time = active_seconds_count
             
-            # Calculate activity percentage
-            activity_percentage = self.calculate_activity_percentage(active_time, total_time)
+            # Calculate activity percentage for this fixed-size window
+            activity_percentage = self.calculate_activity_percentage(
+                active_time,
+                window_seconds,
+            )
             
             print("\n" + "="*60)
             print(f"ACTIVITY SUMMARY - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             print("="*60)
             print(f"Time Period: {self.interval_seconds} seconds")
-            print(f"Total Time: {total_time:.2f} seconds")
+            print(f"Total Time: {window_seconds} seconds")
             print(f"Active Seconds: {active_seconds_count} seconds")
             print(f"Activity Percentage: {activity_percentage:.2f}%")
             print(f"Mouse Events: {self.mouse_events}")
@@ -253,6 +420,19 @@ class ActivityTracker:
             print("Note: Keyboard tracking may require administrator privileges on Windows")
             self.keyboard_listener = None
         
+        # Start facecam in a background thread
+        if OPENCV_AVAILABLE:
+            try:
+                self.camera_active = True
+                self.camera_thread = Thread(target=self.capture_facecam, daemon=True)
+                self.camera_thread.start()
+                print("Facecam: Active (window 'Facecam')")
+            except Exception as e:
+                self.camera_active = False
+                print(f"Facecam: Failed to start ({e})")
+        else:
+            print("Facecam: OpenCV (cv2) not installed, skipping camera.")
+        
         # Keep filtered stderr active to suppress ongoing pynput errors
         
         print()  # Empty line for readability
@@ -274,6 +454,11 @@ class ActivityTracker:
         self.polling_active = False
         if self.mouse_polling_thread:
             self.mouse_polling_thread.join(timeout=1.0)
+        
+        # Stop facecam
+        self.camera_active = False
+        if self.camera_thread and self.camera_thread.is_alive():
+            self.camera_thread.join(timeout=1.0)
         
         try:
             if self.mouse_listener:
