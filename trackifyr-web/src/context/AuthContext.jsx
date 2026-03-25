@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
     return { success: true };
   };
 
-  const signin = (email, password) => {
+  const signin = (email, _password) => {
     // Fake signin - check localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {

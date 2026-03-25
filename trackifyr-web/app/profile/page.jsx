@@ -96,7 +96,7 @@ export default function ProfilePage() {
         setErrors({})
         window.location.reload()
       }
-    } catch (error) {
+    } catch {
       setErrors({ submit: 'Failed to save profile. Please try again.' })
     }
   }

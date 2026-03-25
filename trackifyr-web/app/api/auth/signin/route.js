@@ -95,7 +95,7 @@ export async function POST(req) {
     })
 
     return res
-  } catch (err) {
+  } catch {
     return NextResponse.json({ success: false, error: 'Failed to sign in' }, { status: 500 })
   }
 }

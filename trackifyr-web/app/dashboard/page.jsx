@@ -20,7 +20,7 @@ import CognitiveLoadCard from '@/components/CognitiveLoadCard'
 import CognitiveLoadCharts from '@/components/CognitiveLoadCharts'
 import SessionLogsTable from '@/components/SessionLogsTable'
 import FeedbackPanel from '@/components/FeedbackPanel'
-import { currentCognitiveLoad, cognitiveLoadTimeSeries, dailyEngagementData, sessionLogs } from '@/data/cognitiveLoadData'
+import { currentCognitiveLoad, cognitiveLoadTimeSeries, sessionLogs } from '@/data/cognitiveLoadData'
 
 const STATS_CARD_COLORS = {
   indigo: 'bg-indigo-100 text-indigo-600',

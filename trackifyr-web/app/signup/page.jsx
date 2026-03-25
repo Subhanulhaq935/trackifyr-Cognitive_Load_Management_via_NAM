@@ -96,7 +96,7 @@ export default function SignupPage() {
         } else {
           setErrors({ submit: 'Registration failed. Please try again.' })
         }
-      } catch (error) {
+      } catch {
         setErrors({ submit: 'An error occurred during registration. Please try again.' })
       } finally {
         setIsSubmitting(false)

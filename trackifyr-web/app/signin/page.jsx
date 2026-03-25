@@ -83,7 +83,7 @@ export default function SigninPage() {
         } else {
           setErrors({ submit: result.error || 'Invalid credentials. Please check your email and password.' })
         }
-      } catch (error) {
+      } catch {
         setErrors({ submit: 'An error occurred during sign-in. Please try again.' })
       } finally {
         setIsSubmitting(false)

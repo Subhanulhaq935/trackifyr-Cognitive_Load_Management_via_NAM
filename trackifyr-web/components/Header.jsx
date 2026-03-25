@@ -9,13 +9,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/context/AuthContext'
 import UserProfileDropdown from './UserProfileDropdown'
 
 const TIME_UPDATE_INTERVAL = 1000
 
 export default function Header({ title, subtitle }) {
-  const { user } = useAuth()
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
