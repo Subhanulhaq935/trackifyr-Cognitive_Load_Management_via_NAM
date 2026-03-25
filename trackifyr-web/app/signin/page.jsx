@@ -75,20 +75,20 @@ export default function SigninPage() {
 
     setIsSubmitting(true)
 
-    try {
-      setTimeout(() => {
-        const result = signin(formData.email, formData.password)
+    setTimeout(async () => {
+      try {
+        const result = await signin(formData.email, formData.password)
         if (result.success) {
           router.push('/dashboard')
         } else {
           setErrors({ submit: result.error || 'Invalid credentials. Please check your email and password.' })
         }
+      } catch (error) {
+        setErrors({ submit: 'An error occurred during sign-in. Please try again.' })
+      } finally {
         setIsSubmitting(false)
-      }, 500)
-    } catch (error) {
-      setErrors({ submit: 'An error occurred during sign-in. Please try again.' })
-      setIsSubmitting(false)
-    }
+      }
+    }, 500)
   }
 
   return (

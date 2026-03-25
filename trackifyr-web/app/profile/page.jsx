@@ -18,7 +18,7 @@ const VALID_ROLES = ['Student', 'Teacher']
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, isAuthLoading } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
@@ -28,10 +28,10 @@ export default function ProfilePage() {
   const [errors, setErrors] = useState({})
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthLoading && !isAuthenticated) {
       router.push('/signin')
     }
-  }, [isAuthenticated, router])
+  }, [isAuthLoading, isAuthenticated, router])
 
   useEffect(() => {
     if (user) {
@@ -43,7 +43,7 @@ export default function ProfilePage() {
     }
   }, [user])
 
-  if (!isAuthenticated) {
+  if (isAuthLoading || !isAuthenticated) {
     return null
   }
 

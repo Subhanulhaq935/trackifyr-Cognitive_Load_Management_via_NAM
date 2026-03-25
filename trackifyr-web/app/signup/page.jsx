@@ -81,12 +81,13 @@ export default function SignupPage() {
 
     setIsSubmitting(true)
 
-    try {
-      setTimeout(() => {
-        const result = signup({
+    setTimeout(async () => {
+      try {
+        const result = await signup({
           id: Date.now(),
           fullName: formData.fullName.trim(),
           email: formData.email.trim().toLowerCase(),
+          password: formData.password,
           role: formData.role,
         })
 
@@ -95,12 +96,12 @@ export default function SignupPage() {
         } else {
           setErrors({ submit: 'Registration failed. Please try again.' })
         }
+      } catch (error) {
+        setErrors({ submit: 'An error occurred during registration. Please try again.' })
+      } finally {
         setIsSubmitting(false)
-      }, 500)
-    } catch (error) {
-      setErrors({ submit: 'An error occurred during registration. Please try again.' })
-      setIsSubmitting(false)
-    }
+      }
+    }, 500)
   }
 
   return (

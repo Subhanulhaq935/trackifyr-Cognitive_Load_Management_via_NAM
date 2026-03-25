@@ -24,15 +24,15 @@ const calculateAverage = (data, key) => {
 
 export default function ReportsPage() {
   const router = useRouter()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isAuthLoading } = useAuth()
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthLoading && !isAuthenticated) {
       router.push('/signin')
     }
-  }, [isAuthenticated, router])
+  }, [isAuthLoading, isAuthenticated, router])
 
-  if (!isAuthenticated) {
+  if (isAuthLoading || !isAuthenticated) {
     return null
   }
 

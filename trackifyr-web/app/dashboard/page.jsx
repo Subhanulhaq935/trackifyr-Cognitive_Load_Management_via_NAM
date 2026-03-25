@@ -31,15 +31,15 @@ const STATS_CARD_COLORS = {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, isAuthLoading } = useAuth()
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthLoading && !isAuthenticated) {
       router.push('/signin')
     }
-  }, [isAuthenticated, router])
+  }, [isAuthLoading, isAuthenticated, router])
 
-  if (!isAuthenticated) {
+  if (isAuthLoading || !isAuthenticated) {
     return null
   }
 
