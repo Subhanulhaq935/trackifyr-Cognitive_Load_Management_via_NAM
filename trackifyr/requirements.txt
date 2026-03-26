@@ -1,3 +1,21 @@
 pynput==1.7.6
 pyautogui==0.9.54
 
+# Jupyter Notebook (training / exploration)
+notebook==7.3.3
+ipykernel==6.29.5
+
+# DAiSEE + webcam pipelines (train_daisee.py, webcam_cognitive_load.py)
+numpy>=2.0.0,<3
+pandas>=2.2.0,<3
+scikit-learn>=1.5.0,<2
+# Use full opencv for cv2.imshow / webcam backends
+opencv-python>=4.10.0,<5
+joblib>=1.4.0,<2
+tqdm>=4.66.0,<5
+mediapipe>=0.10.14,<0.11
+
+# PyTorch: default wheels are often CPU-only. For NVIDIA GPU, install matching CUDA build, e.g.:
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+torch>=2.2.0,<3
+torchvision>=0.17.0,<1

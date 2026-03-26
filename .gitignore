@@ -1,4 +1,7 @@
 # Python
+# Jupyter Notebook
+.ipynb_checkpoints/
+
 __pycache__/
 *.py[cod]
 *$py.class
@@ -93,3 +96,8 @@ docs/_build/
 # Allow Next.js app library code (top-level rule `lib/` is for Python)
 !trackifyr/lib/
 !trackifyr/lib/**
+
+# Trained ML artifacts (regenerate with train_daisee.py)
+trackifyr/artifacts/
+trackifyr/ml/mediapipe_models/
+
