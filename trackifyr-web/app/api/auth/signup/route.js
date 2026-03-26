@@ -52,6 +52,8 @@ export async function POST(req) {
       },
     })
   } catch (err) {
+
+    console.error("FULL DATABASE ERROR:", err);
     // Unique constraint violation => email already exists
     if (String(err?.message || '').includes('users_email_key')) {
       return NextResponse.json({ success: false, error: 'Email already exists' }, { status: 409 })
