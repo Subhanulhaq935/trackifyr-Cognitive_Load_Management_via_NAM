@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src http://localhost:* http://127.0.0.1:* https:;" />
+    <title>Trackifyr</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <section id="view-login" class="view view-active" aria-label="Sign in">
+        <div class="bg-gradient"></div>
+        <div class="login-layout">
+          <header class="login-header" aria-label="Trackifyr">
+            <div class="login-header-brand">
+              <img
+                class="brand-icon"
+                src="./assets/trackifyr-icon.png"
+                alt=""
+                width="52"
+                height="52"
+                decoding="async"
+              />
+              <span class="brand-wordmark">Trackifyr</span>
+            </div>
+            <p class="login-subtitle">Sign in to your account</p>
+          </header>
+          <div class="card card-enter card-compact">
+            <div class="card-body card-body-login">
+            <form id="form-login" class="form">
+              <label class="field">
+                <span class="field-label">Email</span>
+                <input id="input-email" type="email" name="email" autocomplete="email" required placeholder="you@university.edu" />
+              </label>
+              <label class="field">
+                <span class="field-label">Password</span>
+                <input id="input-password" type="password" name="password" autocomplete="current-password" required placeholder="••••••••" />
+              </label>
+              <p id="login-error" class="form-error" role="alert" hidden></p>
+              <button type="submit" class="btn btn-primary btn-login-submit" id="btn-login">
+                <span class="btn-text">Sign in</span>
+              </button>
+            </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-session" class="view" aria-label="Session" hidden>
+        <div class="bg-gradient"></div>
+        <div class="card card-enter card-compact session-card">
+          <div class="session-brand">
+            <div class="login-header-brand">
+              <img
+                class="brand-icon"
+                src="./assets/trackifyr-icon.png"
+                alt=""
+                width="44"
+                height="44"
+                decoding="async"
+              />
+              <span class="brand-wordmark">Trackifyr</span>
+            </div>
+          </div>
+          <div class="session-top">
+            <div class="session-who">
+              <span class="session-user" id="session-user-name"></span>
+              <span class="session-email" id="session-user-email"></span>
+            </div>
+            <button type="button" class="btn-link" id="btn-signout">Sign out</button>
+          </div>
+          <div class="card-body session-body">
+            <div class="timer-block">
+              <div class="timer-display" id="timer-display" aria-live="polite">00:00:00</div>
+              <div class="timer-dot" id="timer-pulse" aria-hidden="true"></div>
+            </div>
+            <button type="button" class="btn btn-primary btn-wide" id="btn-timer-toggle">Start</button>
+            <p class="timer-hint" id="timer-hint">Start or pause the session timer.</p>
+
+            <div class="divider"></div>
+
+            <div class="camera-row">
+              <span class="camera-inline-label">Webcam</span>
+              <button type="button" class="cam-toggle" id="btn-cam-toggle" role="switch" aria-checked="false" aria-label="Toggle webcam">
+                <span class="cam-knob"></span>
+              </button>
+            </div>
+            <p class="camera-status" id="camera-status" role="status"></p>
+          </div>
+        </div>
+      </section>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>

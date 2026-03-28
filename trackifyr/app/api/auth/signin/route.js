@@ -14,6 +14,7 @@ function makeExpiryDate(days = 7) {
 
 export async function POST(req) {
   try {
+    const desktopClient = req.headers.get('x-trackifyr-desktop') === '1'
     const body = await req.json()
     const { email, password } = body || {}
 
@@ -76,7 +77,7 @@ export async function POST(req) {
       [user.id, token, expiresAt],
     )
 
-    const res = NextResponse.json({
+    const payload = {
       success: true,
       user: {
         id: user.id,
@@ -84,7 +85,12 @@ export async function POST(req) {
         email: user.email,
         role: user.role,
       },
-    })
+    }
+    if (desktopClient) {
+      payload.sessionToken = token
+    }
+
+    const res = NextResponse.json(payload)
 
     res.cookies.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,

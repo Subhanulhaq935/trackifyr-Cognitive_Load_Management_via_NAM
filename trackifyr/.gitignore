@@ -1,3 +1,6 @@
+# Desktop build output
+desktop/release/
+
 # Dependencies
 node_modules/
 npm-debug.log*

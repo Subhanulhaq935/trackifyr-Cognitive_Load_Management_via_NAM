@@ -1,0 +1,69 @@
+# Builds the Electron Windows installer and publishes it to a GitHub Release.
+# After the first run, set this URL in Vercel (Environment Variables):
+# NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL=https://github.com/OWNER/REPO/releases/latest/download/trackifyr-desktop.zip
+#
+# Run: Actions → "Desktop release" → Run workflow (set version if needed).
+
+name: Desktop release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (tag will be desktop-vVERSION)'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: trackifyr/desktop/package-lock.json
+
+      - name: Install desktop dependencies
+        working-directory: trackifyr/desktop
+        run: npm ci
+
+      - name: Build Windows installer
+        working-directory: trackifyr/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run dist
+
+      - name: Zip installer for smaller download
+        working-directory: trackifyr/desktop/release
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Filter "trackifyr-Setup-*.exe" | Where-Object { $_.Name -notlike '__*' } | Select-Object -First 1
+          if (-not $exe) { throw "No trackifyr-Setup-*.exe found in release/" }
+          $zipPath = Join-Path $pwd "trackifyr-desktop.zip"
+          if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
+          Compress-Archive -LiteralPath $exe.FullName -DestinationPath $zipPath -CompressionLevel Optimal
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-v${{ inputs.version }}
+          name: Trackifyr Desktop v${{ inputs.version }}
+          make_latest: true
+          generate_release_notes: true
+          body: |
+            **Windows** — Download **`trackifyr-desktop.zip`**, extract it, then run `trackifyr-Setup-*.exe`.
+
+            This build is **not code-signed**; SmartScreen may show a warning.
+
+            Direct `.exe` is included as well if you prefer not to use ZIP.
+          files: |
+            trackifyr/desktop/release/trackifyr-desktop.zip
+            trackifyr/desktop/release/trackifyr-Setup-*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

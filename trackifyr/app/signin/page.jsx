@@ -225,9 +225,9 @@ export default function SigninPage() {
                 </button>
               </div>
 
-              <div className="text-center pt-4">
+              <div className="text-center pt-4 space-y-3">
                 <p className="text-sm text-gray-600">
-                  Don't have an account?{' '}
+                  Don&apos;t have an account?{' '}
                   <Link 
                     href="/signup" 
                     className="font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-200 inline-flex items-center"
@@ -236,6 +236,17 @@ export default function SigninPage() {
                     <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
+                  </Link>
+                </p>
+                <p className="text-sm text-gray-600">
+                  <Link
+                    href="/download"
+                    className="font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-200 inline-flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download desktop app
                   </Link>
                 </p>
               </div>

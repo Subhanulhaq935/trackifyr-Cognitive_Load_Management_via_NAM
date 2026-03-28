@@ -1,15 +1,12 @@
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { getSessionTokenFromRequest } from '@/lib/auth-session'
 
 export const runtime = 'nodejs'
 
-const SESSION_COOKIE_NAME = 'trackifyr_session'
-
-export async function GET() {
+export async function GET(request) {
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value
+    const token = await getSessionTokenFromRequest(request)
     if (!token) {
       return NextResponse.json({ success: false }, { status: 401 })
     }
