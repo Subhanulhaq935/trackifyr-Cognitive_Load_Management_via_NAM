@@ -3,6 +3,9 @@
 # …/releases/latest/download/trackifyr-desktop-setup.exe (and trackifyr-desktop.zip is still uploaded).
 #
 # Run: Actions → "Desktop release" → Run workflow (set version if needed).
+#
+# Optional: vars.TRACKIFYR_API_BASE overrides release-config.json before build (same origin, no path).
+# If unset, the workflow uses apiBase already committed in trackifyr/desktop/release-config.json.
 
 name: Desktop release
 
@@ -32,6 +35,12 @@ jobs:
       - name: Install desktop dependencies
         working-directory: trackifyr/desktop
         run: npm ci
+
+      - name: Point desktop app at production API
+        working-directory: trackifyr/desktop
+        env:
+          TRACKIFYR_API_BASE: ${{ vars.TRACKIFYR_API_BASE }}
+        run: node scripts/write-release-config.js
 
       - name: Build Windows installer
         working-directory: trackifyr/desktop

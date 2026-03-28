@@ -131,3 +131,7 @@ jspm_packages/
 
 # User uploads (avatars, etc.)
 public/uploads/
+
+# Desktop release bundles (large; ship via GitHub Releases, not git)
+public/releases/*
+!public/releases/.gitkeep

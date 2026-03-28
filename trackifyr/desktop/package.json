@@ -8,6 +8,7 @@
   "scripts": {
     "start": "electron .",
     "predist": "node ./scripts/clean-release.js",
+    "write-release-config": "node ./scripts/write-release-config.js",
     "dist": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false node ./node_modules/electron-builder/cli.js --win --x64"
   },
   "devDependencies": {
