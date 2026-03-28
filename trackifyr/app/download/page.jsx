@@ -8,14 +8,13 @@ export const metadata = {
 }
 
 /**
- * When no env var and no file in `public/releases/`, use this GitHub Release asset.
- * Tag URL tracks a specific desktop release; bump path when you publish desktop-vX.Y.Z, or set
- * NEXT_PUBLIC_DESKTOP_GITHUB_EXE (e.g. …/releases/latest/download/trackifyr-desktop-setup.exe once CI uploads it).
+ * When no env var and no file in `public/releases/`, use latest GitHub Release asset (stable name from Desktop release CI).
+ * Override for forks: NEXT_PUBLIC_DESKTOP_GITHUB_EXE
  * Disable: NEXT_PUBLIC_DESKTOP_DOWNLOAD_DISABLE_GITHUB=1
  */
 const DEFAULT_GITHUB_LATEST_EXE =
   process.env.NEXT_PUBLIC_DESKTOP_GITHUB_EXE?.trim() ||
-  'https://github.com/Subhanulhaq935/trackifyr-Cognitive_Load_Management_via_NAM/releases/download/desktop-v1.0.0/trackifyr-Setup-1.0.0.exe'
+  'https://github.com/Subhanulhaq935/trackifyr-Cognitive_Load_Management_via_NAM/releases/latest/download/trackifyr-desktop-setup.exe'
 
 function getBundledRelease() {
   const dir = path.join(process.cwd(), 'public', 'releases')
