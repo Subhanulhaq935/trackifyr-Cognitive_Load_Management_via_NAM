@@ -10,6 +10,7 @@
   const formLogin = document.getElementById('form-login')
   const inputEmail = document.getElementById('input-email')
   const inputPassword = document.getElementById('input-password')
+  const loginApiHint = document.getElementById('login-api-hint')
   const loginError = document.getElementById('login-error')
   const btnLogin = document.getElementById('btn-login')
   const btnLoginText = btnLogin.querySelector('.btn-text')
@@ -32,6 +33,10 @@
 
   function getApiBase() {
     return String(apiConfig.apiBaseDefault || 'http://localhost:3000').replace(/\/$/, '')
+  }
+
+  if (loginApiHint) {
+    loginApiHint.textContent = `Server: ${getApiBase()}`
   }
 
   function fitWindow() {
@@ -188,11 +193,16 @@
     const password = inputPassword.value
     setLoginLoading(true)
     try {
-      const { ok, data } = await window.trackifyr.signin({
+      const result = await window.trackifyr.signin({
         apiBase: getApiBase(),
         email,
         password,
       })
+      if (result.fetchError) {
+        showLoginError(`Could not reach the server. ${result.fetchError}`)
+        return
+      }
+      const { ok, data } = result
       if (!ok || !data?.success || !data?.sessionToken) {
         showLoginError(data?.error || 'Sign-in failed.')
         return
@@ -261,7 +271,15 @@
       return
     }
     try {
-      const { ok, data } = await window.trackifyr.me({ apiBase: getApiBase(), sessionToken: token })
+      const result = await window.trackifyr.me({ apiBase: getApiBase(), sessionToken: token })
+      if (result.fetchError) {
+        clearSession()
+        showView('login')
+        showLoginError(`Could not reach the server. ${result.fetchError}`)
+        fitWindow()
+        return
+      }
+      const { ok, data } = result
       if (ok && data?.success && data?.user) {
         applyUserToSessionUI(data.user)
         localStorage.setItem(LS_USER, JSON.stringify(data.user))

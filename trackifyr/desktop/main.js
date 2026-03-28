@@ -27,15 +27,21 @@ function normalizeBase(url) {
 }
 
 async function apiFetch(base, pathname, options = {}) {
-  const url = `${normalizeBase(base)}${pathname}`
-  const res = await fetch(url, options)
-  let data = {}
   try {
-    data = await res.json()
-  } catch {
-    /* empty */
+    const url = `${normalizeBase(base)}${pathname}`
+    const res = await fetch(url, options)
+    let data = {}
+    try {
+      data = await res.json()
+    } catch {
+      /* empty */
+    }
+    return { ok: res.ok, status: res.status, data }
+  } catch (err) {
+    const code = err && err.code ? ` (${err.code})` : ''
+    const msg = (err && err.message) || String(err)
+    return { ok: false, status: 0, data: {}, fetchError: `${msg}${code}` }
   }
-  return { ok: res.ok, status: res.status, data }
 }
 
 function createWindow() {

@@ -254,6 +254,14 @@ body {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
+.login-api-hint {
+  margin: 0 0 2px;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--slate-500);
+  word-break: break-all;
+}
+
 .form-error {
   margin: 0;
   padding: 8px 10px;
