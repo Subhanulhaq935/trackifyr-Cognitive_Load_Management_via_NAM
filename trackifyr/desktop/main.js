@@ -4,6 +4,12 @@
 const { app, BrowserWindow, ipcMain, session } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const {
+  startHttpServer,
+  registerIpc,
+  setMainWindowGetter,
+  stopChildren,
+} = require('./tracking-bridge.js')
 
 function loadReleaseConfigApiBase() {
   try {
@@ -44,6 +50,8 @@ async function apiFetch(base, pathname, options = {}) {
   }
 }
 
+let mainWindow = null
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 360,
@@ -63,6 +71,10 @@ function createWindow() {
 
   win.once('ready-to-show', () => win.show())
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'))
+  mainWindow = win
+  win.on('closed', () => {
+    mainWindow = null
+  })
 }
 
 app.whenReady().then(() => {
@@ -116,11 +128,19 @@ app.whenReady().then(() => {
     })
   })
 
+  setMainWindowGetter(() => mainWindow)
+  registerIpc(ipcMain)
+  startHttpServer()
+
   createWindow()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('before-quit', () => {
+  stopChildren()
 })
 
 app.on('window-all-closed', () => {
