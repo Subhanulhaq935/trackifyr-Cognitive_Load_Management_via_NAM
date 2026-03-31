@@ -25,6 +25,8 @@
     "files": [
       "main.js",
       "preload.js",
+      "fusion.js",
+      "tracking-bridge.js",
       "renderer/**/*",
       "release-config.json"
     ],
