@@ -52,7 +52,7 @@ export default function CognitiveLoadCharts({ loadSeries = [], dailySeries = [] 
           <div>
             <h2 className="text-xl font-bold text-gray-900">Cognitive load (session)</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Activity load and model class split (Low / Medium / High %) while the desktop app is sending live data
+              Activity load and fused engagement % (from desktop model) while the app is sending data
             </p>
           </div>
         </div>
@@ -71,17 +71,9 @@ export default function CognitiveLoadCharts({ loadSeries = [], dailySeries = [] 
                   <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
-                <linearGradient id="engL" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#94a3b8" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="engM" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                <linearGradient id="colorEngagement" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="engH" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -100,34 +92,16 @@ export default function CognitiveLoadCharts({ loadSeries = [], dailySeries = [] 
                 strokeWidth={2.5}
                 fill="url(#colorLoad)"
                 name="Activity load %"
-                dot={{ r: 2, fill: '#6366f1' }}
+                dot={{ r: 3, fill: '#6366f1' }}
               />
               <Area
                 type="monotone"
-                dataKey="engLow"
-                stroke="#64748b"
-                strokeWidth={2}
-                fill="url(#engL)"
-                name="Eng. Low %"
-                dot={{ r: 2, fill: '#64748b' }}
-              />
-              <Area
-                type="monotone"
-                dataKey="engMed"
+                dataKey="engagement"
                 stroke="#10b981"
-                strokeWidth={2}
-                fill="url(#engM)"
-                name="Eng. Medium %"
-                dot={{ r: 2, fill: '#10b981' }}
-              />
-              <Area
-                type="monotone"
-                dataKey="engHigh"
-                stroke="#d97706"
-                strokeWidth={2}
-                fill="url(#engH)"
-                name="Eng. High %"
-                dot={{ r: 2, fill: '#d97706' }}
+                strokeWidth={2.5}
+                fill="url(#colorEngagement)"
+                name="Engagement %"
+                dot={{ r: 3, fill: '#10b981' }}
               />
             </AreaChart>
           </ResponsiveContainer>

@@ -26,6 +26,7 @@ test('no face => engagement low', () => {
     face_detected: false,
   })
   assert.strictEqual(o.engagement, 'Low')
+  assert.strictEqual(o.engagement_score, 11)
   assert.deepStrictEqual(o.engagement_proba_pct, [100, 0, 0])
 })
 
@@ -54,7 +55,7 @@ test('webcam on but JSON not yet: activity fallback, status waiting', () => {
     synthetic_webcam: true,
     webcam_ml_waiting: true,
   })
-  assert.ok(o.engagement_score > 0)
+  assert.strictEqual(o.engagement_score, 80)
   assert.strictEqual(o.webcam_ml_status, 'waiting')
   assert.deepStrictEqual(o.engagement_proba_pct, [0, 0, 100])
 })

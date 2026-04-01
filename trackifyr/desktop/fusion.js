@@ -63,10 +63,15 @@ function engagementLabelFromScore(score) {
   return 'High'
 }
 
-function discreteEngagementToScore(engagement) {
-  if (engagement === 'High') return 85
-  if (engagement === 'Low') return 30
-  return 55
+/** Soft class priors when we have no cognitive_proba — score uses same formula as the model path. */
+const PRIOR_ENG_GAZE_OR_NO_FACE = [0.78, 0.18, 0.04]
+const PRIOR_ENG_COGNITIVE_LOW = [0.22, 0.62, 0.16]
+
+function priorTripleFromFinalLoadForEngagement(final_model_load) {
+  const f = String(final_model_load || 'Medium')
+  if (f === 'High') return [0.1, 0.25, 0.65]
+  if (f === 'Low') return [0.55, 0.35, 0.1]
+  return [0.2, 0.6, 0.2]
 }
 
 /**
@@ -114,7 +119,7 @@ function fuseTracking(input) {
       webcam_ml_status = 'waiting'
       const eng = engagementFromActivityLoad(activity_load)
       engagement = eng
-      engagement_score = discreteEngagementToScore(eng)
+      engagement_score = Math.round(Math.max(0, Math.min(100, activity_load)))
       engagement_proba_pct = labelToProbaPct(eng)
     } else {
       webcam_ml_status = 'off'
@@ -130,17 +135,29 @@ function fuseTracking(input) {
   } else if (!face_detected || gaze_away >= GAZE_AWAY_ENGAGEMENT_LOW) {
     webcam_ml_status = 'active'
     engagement = 'Low'
-    engagement_score = 30
+    engagement_score = engagementScoreFromModelProba(
+      PRIOR_ENG_GAZE_OR_NO_FACE,
+      face_detected,
+      gaze_away,
+    )
     engagement_proba_pct = labelToProbaPct(engagement)
   } else if (final_model_load === 'Low') {
     webcam_ml_status = 'active'
     engagement = 'Medium'
-    engagement_score = 55
+    engagement_score = engagementScoreFromModelProba(
+      PRIOR_ENG_COGNITIVE_LOW,
+      face_detected,
+      gaze_away,
+    )
     engagement_proba_pct = labelToProbaPct(engagement)
   } else {
     webcam_ml_status = 'active'
     engagement = final_model_load
-    engagement_score = discreteEngagementToScore(engagement)
+    engagement_score = engagementScoreFromModelProba(
+      priorTripleFromFinalLoadForEngagement(final_model_load),
+      face_detected,
+      gaze_away,
+    )
     engagement_proba_pct = labelToProbaPct(engagement)
   }
 
