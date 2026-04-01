@@ -5,6 +5,9 @@ import {
   getUserIdFromSessionToken,
 } from '@/lib/trackingLiveDb'
 
+/** No recent ingest from the desktop app — treat as no live session */
+const STALE_MS = 22000
+
 /** Payload when no data */
 const NO_DATA = {
   hasData: false,
@@ -26,9 +29,13 @@ export async function GET(request) {
       if (!userId) {
         return Response.json(NO_DATA)
       }
-      const payload = await getTrackingLivePayloadForUser(userId)
-      if (payload && typeof payload === 'object' && Object.keys(payload).length > 0) {
-        return Response.json({ ...payload, hasData: true })
+      const row = await getTrackingLivePayloadForUser(userId)
+      if (row?.payload && typeof row.payload === 'object') {
+        const updated = row.updatedAt ? new Date(row.updatedAt).getTime() : 0
+        if (!updated || Number.isNaN(updated) || Date.now() - updated > STALE_MS) {
+          return Response.json(NO_DATA)
+        }
+        return Response.json({ ...row.payload, hasData: true })
       }
       return Response.json(NO_DATA)
     } catch {

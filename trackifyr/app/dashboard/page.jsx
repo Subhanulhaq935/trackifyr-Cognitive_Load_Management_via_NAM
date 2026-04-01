@@ -17,24 +17,18 @@ import CognitiveLoadCharts from '@/components/CognitiveLoadCharts'
 import SessionLogsTable from '@/components/SessionLogsTable'
 import FeedbackPanel from '@/components/FeedbackPanel'
 
-function labelToPercent(label) {
-  if (label === 'High') return 85
-  if (label === 'Medium') return 55
-  return 30
-}
-
-/** Prefer numeric score from fusion; fallback to label mapping for older payloads */
-function engagementDisplayPercent(live) {
-  if (!live || !live.hasData) return null
-  if (typeof live.engagement_score === 'number' && !Number.isNaN(live.engagement_score)) {
-    return live.engagement_score
+function engagementProbaTriple(live) {
+  if (!live?.hasData || !Array.isArray(live.engagement_proba_pct) || live.engagement_proba_pct.length !== 3) {
+    return null
   }
-  return live.engagement ? labelToPercent(live.engagement) : null
+  return live.engagement_proba_pct.map((x) => Math.max(0, Math.min(100, Number(x) || 0)))
 }
 
 const STATS_CARD_COLORS = {
   indigo: 'bg-indigo-100 text-indigo-600',
+  slate: 'bg-slate-100 text-slate-600',
   green: 'bg-green-100 text-green-600',
+  amber: 'bg-amber-100 text-amber-600',
   blue: 'bg-blue-100 text-blue-600',
   purple: 'bg-purple-100 text-purple-600',
 }
@@ -110,11 +104,26 @@ export default function DashboardPage() {
     }
     setLastUpdated(Date.now())
     const label = new Date().toLocaleTimeString()
+    const ep = Array.isArray(live.engagement_proba_pct) && live.engagement_proba_pct.length === 3
+      ? live.engagement_proba_pct.map((x) => Math.max(0, Math.min(100, Number(x) || 0)))
+      : [0, 0, 0]
+    const row = {
+      time: label,
+      load: typeof live.activity_load === 'number' ? live.activity_load : 0,
+      engLow: ep[0],
+      engMed: ep[1],
+      engHigh: ep[2],
+    }
     setChartSeries((prev) => {
-      const row = {
-        time: label,
-        load: typeof live.activity_load === 'number' ? live.activity_load : 0,
-        engagement: engagementDisplayPercent(live) ?? 0,
+      const last = prev[prev.length - 1]
+      if (
+        last &&
+        last.load === row.load &&
+        last.engLow === row.engLow &&
+        last.engMed === row.engMed &&
+        last.engHigh === row.engHigh
+      ) {
+        return prev
       }
       return [...prev, row].slice(-48)
     })
@@ -127,46 +136,63 @@ export default function DashboardPage() {
   const hasData = Boolean(live?.hasData)
   const filterLabel =
     viewFilter === 'activity' ? 'Activity only' : viewFilter === 'webcam' ? 'Webcam only' : 'Combined'
+  const eng = engagementProbaTriple(live)
 
   const statsCards = [
     {
       title: 'Activity load',
       value: hasData && typeof live.activity_load === 'number' ? `${Math.round(live.activity_load)}%` : '—',
       change: hasData ? filterLabel : '—',
-      trend: 'neutral',
+      color: 'indigo',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
-      color: 'indigo',
     },
     {
-      title: 'Engagement',
-      value:
-        hasData && engagementDisplayPercent(live) != null
-          ? `${Math.round(engagementDisplayPercent(live))}%`
-          : '—',
-      change: hasData && live.engagement ? String(live.engagement) : '—',
-      trend: 'neutral',
+      title: 'Eng. Low %',
+      value: hasData && eng ? `${Math.round(eng[0])}%` : '—',
+      change: hasData ? 'Model class' : '—',
+      color: 'slate',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
         </svg>
       ),
+    },
+    {
+      title: 'Eng. Medium %',
+      value: hasData && eng ? `${Math.round(eng[1])}%` : '—',
+      change: hasData ? 'Model class' : '—',
       color: 'green',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14" />
+        </svg>
+      ),
+    },
+    {
+      title: 'Eng. High %',
+      value: hasData && eng ? `${Math.round(eng[2])}%` : '—',
+      change: hasData ? 'Model class' : '—',
+      color: 'amber',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+      ),
     },
     {
       title: 'Final cognitive load',
       value: hasData && live.final_cognitive_load ? String(live.final_cognitive_load) : '—',
       change: hasData ? 'Fused estimate' : '—',
-      trend: 'neutral',
+      color: 'blue',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      color: 'blue',
     },
     {
       title: 'Blinks · Gaze away',
@@ -174,14 +200,13 @@ export default function DashboardPage() {
         hasData && (live.blinks != null || live.gaze_away != null)
           ? `${live.blinks ?? '—'} · ${live.gaze_away ?? '—'}`
           : '—',
-      change: hasData ? 'Webcam interval (desktop)' : '—',
-      trend: 'neutral',
+      change: hasData ? 'Webcam interval' : '—',
+      color: 'purple',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
       ),
-      color: 'purple',
     },
   ]
 
@@ -193,18 +218,18 @@ export default function DashboardPage() {
 
         <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4">
           <p className="mb-4 text-sm text-gray-600">
-            Live metrics sync from the{' '}
+            Live metrics come only from the{' '}
             <Link href="/download" className="font-semibold text-indigo-700 underline hover:text-indigo-900">
               desktop app
             </Link>{' '}
-            (same account).{' '}
+            while it is running and ingesting (same account). If you close the app, numbers clear within about half a minute.{' '}
             <Link href="/tracking-setup" className="text-indigo-600 underline hover:text-indigo-900">
               Setup
             </Link>
             .
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-4">
             {statsCards.map((stat, index) => (
               <div
                 key={index}
@@ -244,7 +269,7 @@ export default function DashboardPage() {
               hasData={hasData}
               level={live?.final_cognitive_load ?? null}
               value={hasData && typeof live.activity_load === 'number' ? live.activity_load : null}
-              engagement={hasData ? engagementDisplayPercent(live) : null}
+              engagementProbaPct={hasData ? live?.engagement_proba_pct : null}
               updatedAt={lastUpdated}
             />
           </div>

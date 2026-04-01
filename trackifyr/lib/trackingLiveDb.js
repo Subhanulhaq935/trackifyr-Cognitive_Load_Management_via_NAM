@@ -49,16 +49,18 @@ export async function upsertTrackingLiveForUser(userId, payload) {
 
 /**
  * @param {number} userId
- * @returns {Promise<object | null>}
+ * @returns {Promise<{ payload: object, updatedAt: Date | string } | null>}
  */
 export async function getTrackingLivePayloadForUser(userId) {
   await ensureTrackingLiveTable()
   const r = await query(
-    `SELECT payload FROM user_tracking_live WHERE user_id = $1 LIMIT 1`,
+    `SELECT payload, updated_at FROM user_tracking_live WHERE user_id = $1 LIMIT 1`,
     [userId],
   )
   const row = r.rows[0]
   if (!row?.payload) return null
   const p = row.payload
-  return typeof p === 'object' && p !== null ? p : null
+  const payload = typeof p === 'object' && p !== null ? p : null
+  if (!payload) return null
+  return { payload, updatedAt: row.updated_at }
 }

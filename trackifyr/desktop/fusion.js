@@ -4,19 +4,6 @@
 const GAZE_AWAY_ENGAGEMENT_LOW = 12
 
 /**
- * When webcam ML is not available we still use a placeholder final_model_load ("Medium").
- * Engagement must not stay stuck at Medium/55% — derive it from keyboard/mouse activity instead.
- * @param {number} activity_load 0–100
- * @returns {'Low' | 'Medium' | 'High'}
- */
-function engagementFromActivityLoad(activity_load) {
-  const a = Number(activity_load) || 0
-  if (a < 18) return 'Low'
-  if (a < 52) return 'Medium'
-  return 'High'
-}
-
-/**
  * @param {unknown} p [pLow, pMedium, pHigh] from mean softmax (v1+v2+v3)
  * @returns {[number, number, number] | null}
  */
@@ -29,11 +16,25 @@ function normalizeProba(p) {
 }
 
 /**
+ * Map model class labels to three % bars (sum ~100) when we only have a discrete label.
+ */
+function labelToProbaPct(engagement) {
+  const e = String(engagement || 'Medium')
+  if (e === 'High') return [0, 0, 100]
+  if (e === 'Low') return [100, 0, 0]
+  return [0, 100, 0]
+}
+
+function probaToPctTriple(modelProba) {
+  const [a, b, c] = modelProba
+  return [Math.round(a * 100), Math.round(b * 100), Math.round(c * 100)]
+}
+
+/**
  * Continuous 0–100 engagement from ensemble class probabilities + gaze / face (trained-model path).
  */
 function engagementScoreFromModelProba(p, face_detected, gaze_away) {
   const [pL, pM, pH] = normalizeProba(p)
-  // Weighted expectation: aligns with dashboard Low≈30, Medium≈55, High≈85 but allows smooth values
   let score = pL * 28 + pM * 55 + pH * 82
   if (!face_detected) {
     score *= 0.32
@@ -41,7 +42,7 @@ function engagementScoreFromModelProba(p, face_detected, gaze_away) {
     const g = Math.min(Number(gaze_away) / GAZE_AWAY_ENGAGEMENT_LOW, 1)
     score *= 1 - 0.42 * g
   }
-  return Math.max(4, Math.min(100, Math.round(score)))
+  return Math.max(0, Math.min(100, Math.round(score)))
 }
 
 function engagementLabelFromScore(score) {
@@ -58,13 +59,7 @@ function discreteEngagementToScore(engagement) {
 
 /**
  * @param {object} input
- * @param {number} [input.activity_percentage]
- * @param {number} [input.activity_load]
- * @param {string} input.final_model_load
- * @param {number} input.blinks
- * @param {number} input.gaze_away
- * @param {boolean} input.face_detected
- * @param {boolean} [input.synthetic_webcam] true when final_model_load is a placeholder (no real webcam fusion)
+ * @param {boolean} [input.synthetic_webcam] true when webcam ML is off (activity-only or placeholder)
  * @param {number[]} [input.cognitive_proba] [pLow, pMedium, pHigh] mean softmax from v1+v2+v3 when webcam is on
  */
 function fuseTracking(input) {
@@ -96,28 +91,36 @@ function fuseTracking(input) {
 
   let engagement = 'Medium'
   let engagement_score = 55
+  /** Three % metrics (Low / Medium / High class mass) for dashboard — zeros when webcam off */
+  let engagement_proba_pct = [0, 0, 0]
 
   if (synthetic_webcam) {
-    engagement = engagementFromActivityLoad(activity_load)
-    engagement_score = discreteEngagementToScore(engagement)
+    engagement = 'Low'
+    engagement_score = 0
+    engagement_proba_pct = [0, 0, 0]
   } else if (modelProba) {
     engagement_score = engagementScoreFromModelProba(input.cognitive_proba, face_detected, gaze_away)
     engagement = engagementLabelFromScore(engagement_score)
+    engagement_proba_pct = probaToPctTriple(modelProba)
   } else if (!face_detected || gaze_away >= GAZE_AWAY_ENGAGEMENT_LOW) {
     engagement = 'Low'
     engagement_score = 30
+    engagement_proba_pct = labelToProbaPct(engagement)
   } else if (final_model_load === 'Low') {
     engagement = 'Medium'
     engagement_score = 55
+    engagement_proba_pct = labelToProbaPct(engagement)
   } else {
     engagement = final_model_load
     engagement_score = discreteEngagementToScore(engagement)
+    engagement_proba_pct = labelToProbaPct(engagement)
   }
 
   return {
     activity_load,
     engagement,
     engagement_score,
+    engagement_proba_pct,
     cognitive_proba: modelProba ? [modelProba[0], modelProba[1], modelProba[2]] : undefined,
     final_cognitive_load,
     blinks,
@@ -128,7 +131,6 @@ function fuseTracking(input) {
 module.exports = {
   fuseTracking,
   GAZE_AWAY_ENGAGEMENT_LOW,
-  engagementFromActivityLoad,
   normalizeProba,
   engagementScoreFromModelProba,
 }

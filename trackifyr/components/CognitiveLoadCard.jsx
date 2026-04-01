@@ -1,9 +1,5 @@
 /**
- * @fileoverview CognitiveLoadCard component - displays current cognitive load status
- * with visual indicators and progress bars.
- * @author Muhammad Moin U Din (BCSF22M023)
- * @author Muhammad Junaid Malik (BCSF22M031)
- * @author Muhammad Subhan Ul Haq (BCSF22M043)
+ * @fileoverview Cognitive load card — activity load + three engagement % bars from model distribution.
  */
 
 'use client'
@@ -41,12 +37,22 @@ const getLevelConfig = (level) => {
   return COGNITIVE_LOAD_LEVELS[level] || DEFAULT_CONFIG
 }
 
-export default function CognitiveLoadCard({ level, value, engagement, hasData = false, updatedAt = null }) {
+export default function CognitiveLoadCard({
+  level,
+  value,
+  engagementProbaPct,
+  hasData = false,
+  updatedAt = null,
+}) {
   const config = getLevelConfig(level)
   const safeValue =
     typeof value === 'number' && !Number.isNaN(value) ? Math.max(0, Math.min(100, value)) : null
-  const safeEngagement =
-    typeof engagement === 'number' && !Number.isNaN(engagement) ? Math.max(0, Math.min(100, engagement)) : null
+
+  const p = Array.isArray(engagementProbaPct) && engagementProbaPct.length === 3 ? engagementProbaPct : null
+  const pL = p ? Math.max(0, Math.min(100, Number(p[0]) || 0)) : null
+  const pM = p ? Math.max(0, Math.min(100, Number(p[1]) || 0)) : null
+  const pH = p ? Math.max(0, Math.min(100, Number(p[2]) || 0)) : null
+  const webcamOff = p && pL === 0 && pM === 0 && pH === 0
 
   if (!hasData) {
     return (
@@ -70,13 +76,7 @@ export default function CognitiveLoadCard({ level, value, engagement, hasData = 
               <div className="h-4 rounded-full bg-gray-200" style={{ width: '0%' }} />
             </div>
           </div>
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-semibold text-gray-700">Engagement</span>
-              <span className="text-2xl font-bold text-gray-400">—</span>
-            </div>
-            <div className="relative w-full bg-gray-200 rounded-full h-3 overflow-hidden" />
-          </div>
+          <p className="text-sm text-gray-500">Engagement model (3× %) appears when the desktop app is running with webcam ML on.</p>
         </div>
         <div className="mt-5 pt-4 border-t border-gray-200 text-sm text-gray-500">Start tracking in the desktop app to see live metrics.</div>
       </div>
@@ -98,7 +98,7 @@ export default function CognitiveLoadCard({ level, value, engagement, hasData = 
       <div className="space-y-5">
         <div>
           <div className="flex justify-between items-center mb-3">
-            <span className="text-sm font-semibold text-gray-700">Load Level</span>
+            <span className="text-sm font-semibold text-gray-700">Activity load</span>
             <span className="text-3xl font-bold text-gray-900">{safeValue != null ? `${Math.round(safeValue)}%` : '—'}</span>
           </div>
           <div className="relative w-full bg-gray-200 rounded-full h-4 overflow-hidden">
@@ -110,16 +110,48 @@ export default function CognitiveLoadCard({ level, value, engagement, hasData = 
         </div>
 
         <div>
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-sm font-semibold text-gray-700">Engagement Level</span>
-            <span className="text-2xl font-bold text-indigo-600">{safeEngagement != null ? `${Math.round(safeEngagement)}%` : '—'}</span>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-semibold text-gray-700">Engagement (model class %)</span>
+            {webcamOff ? (
+              <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                Webcam ML off
+              </span>
+            ) : null}
           </div>
-          <div className="relative w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-indigo-500 to-blue-500 h-3 rounded-full transition-all duration-1000"
-              style={{ width: `${safeEngagement ?? 0}%` }}
-            />
-          </div>
+          <p className="text-xs text-gray-500 mb-3">Low / Medium / High from fused v1+v2+v3 probabilities (sums ~100% when webcam is on).</p>
+          {p ? (
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-xs font-medium text-slate-600 mb-1">
+                  <span>Low</span>
+                  <span>{Math.round(pL)}%</span>
+                </div>
+                <div className="relative w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                  <div className="h-2.5 rounded-full bg-slate-500 transition-all" style={{ width: `${pL}%` }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs font-medium text-emerald-700 mb-1">
+                  <span>Medium</span>
+                  <span>{Math.round(pM)}%</span>
+                </div>
+                <div className="relative w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                  <div className="h-2.5 rounded-full bg-emerald-500 transition-all" style={{ width: `${pM}%` }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs font-medium text-amber-800 mb-1">
+                  <span>High</span>
+                  <span>{Math.round(pH)}%</span>
+                </div>
+                <div className="relative w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                  <div className="h-2.5 rounded-full bg-amber-500 transition-all" style={{ width: `${pH}%` }} />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">—</p>
+          )}
         </div>
       </div>
 
@@ -138,6 +170,3 @@ export default function CognitiveLoadCard({ level, value, engagement, hasData = 
     </div>
   )
 }
-
-
-
