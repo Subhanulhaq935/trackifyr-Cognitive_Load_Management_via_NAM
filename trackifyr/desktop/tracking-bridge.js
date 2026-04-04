@@ -24,6 +24,8 @@ let lastActivity = null
 let lastWebcam = null
 let lastFused = null
 let webcamEnabled = false
+/** @type {null | 'no_models' | 'exited'} */
+let webcamPipelineError = null
 /** @type {'combined' | 'activity' | 'webcam'} */
 let filterMode = 'combined'
 
@@ -45,16 +47,49 @@ function repoRoot() {
   return path.join(__dirname, '..')
 }
 
+function daiseeArtifactsDir(root) {
+  return path.join(root, 'artifacts', 'daisee')
+}
+
+/** Same defaults as webcam_cognitive_load.py / ml.daisee_common.ARTIFACTS_DIR */
+function resolveDaiseeModelPaths(root) {
+  const dir = daiseeArtifactsDir(root)
+  const v1 = String(process.env.TRACKIFYR_V1_MODEL || '').trim() || path.join(dir, 'v1_rf.joblib')
+  const v2 = String(process.env.TRACKIFYR_V2_MODEL || '').trim() || path.join(dir, 'v2_rf.joblib')
+  const v3 = String(process.env.TRACKIFYR_V3_MODEL || '').trim() || path.join(dir, 'v3_cnn.pt')
+  return {
+    v1: path.resolve(v1),
+    v2: path.resolve(v2),
+    v3: path.resolve(v3),
+  }
+}
+
+function hasWebcamModels(root) {
+  if (String(process.env.TRACKIFYR_SKIP_WEBCAM_MODEL_CHECK || '').trim() === '1') return true
+  const mp = resolveDaiseeModelPaths(root)
+  try {
+    return fs.existsSync(mp.v1) && fs.existsSync(mp.v2) && fs.existsSync(mp.v3)
+  } catch {
+    return false
+  }
+}
+
 function pythonExecutable() {
   return (process.env.TRACKIFYR_PYTHON || 'python').trim() || 'python'
 }
 
-function pythonEnv() {
-  return {
+function pythonEnv(cwdRoot) {
+  const env = {
     ...process.env,
     PYTHONUNBUFFERED: '1',
     PYTHONIOENCODING: 'utf-8',
   }
+  if (cwdRoot) {
+    const sep = process.platform === 'win32' ? ';' : ':'
+    const extra = String(env.PYTHONPATH || '').trim()
+    env.PYTHONPATH = extra ? `${cwdRoot}${sep}${extra}` : cwdRoot
+  }
+  return env
 }
 
 function broadcastUpdate() {
@@ -66,6 +101,7 @@ function broadcastUpdate() {
     fused: lastFused,
     filterMode,
     webcamEnabled,
+    webcamPipelineError,
   })
 }
 
@@ -194,8 +230,9 @@ function wireStdoutJson(proc, onObj) {
 }
 
 function safeJsonLine(line) {
-  const s = String(line || '').trim()
+  let s = String(line || '').trim()
   if (!s) return null
+  if (s.charCodeAt(0) === 0xfeff) s = s.slice(1)
   try {
     return JSON.parse(s)
   } catch {
@@ -224,11 +261,25 @@ function stopChildren() {
   lastWebcam = null
   lastFused = null
   webcamEnabled = false
+  webcamPipelineError = null
 }
 
 function spawnWebcamPipeline() {
   if (webcamProc) return
   const root = repoRoot()
+  const modelPaths = resolveDaiseeModelPaths(root)
+  if (!hasWebcamModels(root)) {
+    const miss = []
+    if (!fs.existsSync(modelPaths.v1)) miss.push(`v1=${modelPaths.v1}`)
+    if (!fs.existsSync(modelPaths.v2)) miss.push(`v2=${modelPaths.v2}`)
+    if (!fs.existsSync(modelPaths.v3)) miss.push(`v3=${modelPaths.v3}`)
+    console.error('[trackifyr] webcam ML missing files:', miss.join(' | '), 'cwd=', root)
+    webcamPipelineError = 'no_models'
+    tryFuse()
+    broadcastUpdate()
+    return
+  }
+  webcamPipelineError = null
   const py = pythonExecutable()
   const camIdx = String(process.env.TRACKIFYR_WEBCAM_INDEX ?? '0').trim() || '0'
   webcamProc = spawn(
@@ -243,8 +294,14 @@ function spawnWebcamPipeline() {
       camIdx,
       '--device',
       'auto',
+      '--v1-model',
+      modelPaths.v1,
+      '--v2-model',
+      modelPaths.v2,
+      '--v3-model',
+      modelPaths.v3,
     ],
-    { cwd: root, env: pythonEnv(), windowsHide: true },
+    { cwd: root, env: pythonEnv(root), windowsHide: true },
   )
   webcamProc.on('error', (err) => {
     console.error('[trackifyr] webcam_cognitive_load spawn error', root, err && err.message)
@@ -259,11 +316,15 @@ function spawnWebcamPipeline() {
     }
     webcamProc = null
     lastWebcam = null
+    if (code != null && code !== 0 && webcamEnabled) {
+      webcamPipelineError = 'exited'
+    }
     tryFuse()
     broadcastUpdate()
   })
   wireStdoutJson(webcamProc, (j) => {
     lastWebcam = j
+    webcamPipelineError = null
     tryFuse()
   })
 }
@@ -310,7 +371,7 @@ function startTracking(opts = {}) {
   activityProc = spawn(
     py,
     ['-u', 'activity_tracker.py', '--interval', String(ACTIVITY_INTERVAL_SEC)],
-    { cwd: root, env: pythonEnv(), windowsHide: true },
+    { cwd: root, env: pythonEnv(root), windowsHide: true },
   )
   activityProc.on('error', (err) => {
     console.error('[trackifyr] activity_tracker spawn error', root, err && err.message)
@@ -361,6 +422,7 @@ function startHttpServer() {
         fused: lastFused,
         filterMode,
         webcamEnabled,
+        webcamPipelineError,
       })
       return
     }
@@ -446,6 +508,7 @@ function registerIpc(ipcMain) {
     fused: lastFused,
     filterMode,
     webcamEnabled,
+    webcamPipelineError,
   }))
 }
 

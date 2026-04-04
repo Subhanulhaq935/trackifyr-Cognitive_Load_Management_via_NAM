@@ -280,10 +280,14 @@
   let offTracking = null
   if (window.trackifyr.onTracking) {
     offTracking = window.trackifyr.onTracking((payload) => {
-      const fused = payload && payload.fused
       if (!trackingStatus) return
+      const fused = payload && payload.fused
+      const wpe = payload && payload.webcamPipelineError
+      const prefix =
+        wpe === 'no_models' ? 'ML missing · ' : wpe === 'exited' ? 'ML stopped · ' : ''
       if (!fused) {
-        if (running) trackingStatus.textContent = ''
+        if (running && wpe === 'no_models') trackingStatus.textContent = 'ML missing'
+        else if (running) trackingStatus.textContent = ''
         return
       }
       const parts = [
@@ -291,7 +295,7 @@
         `Engagement ${fused.engagement != null ? fused.engagement : '—'}`,
         `Cognitive ${fused.final_cognitive_load}`,
       ]
-      trackingStatus.textContent = parts.join(' · ')
+      trackingStatus.textContent = prefix + parts.join(' · ')
     })
   }
 
