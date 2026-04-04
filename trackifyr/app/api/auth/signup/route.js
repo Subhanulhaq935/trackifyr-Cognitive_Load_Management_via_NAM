@@ -43,15 +43,16 @@ export async function POST(req) {
     })
   } catch (err) {
 
-    console.error("FULL DATABASE ERROR:", err);
+    console.error('[auth/signup]', err)
     // Unique constraint violation => email already exists
     if (String(err?.message || '').includes('users_email_key')) {
       return NextResponse.json({ success: false, error: 'Email already exists' }, { status: 409 })
     }
-    return NextResponse.json(
-      { success: false, error: 'Failed to sign up' },
-      { status: 500 },
-    )
+    const detail =
+      process.env.NODE_ENV === 'development' && err && typeof err.message === 'string'
+        ? err.message
+        : 'Failed to sign up'
+    return NextResponse.json({ success: false, error: detail }, { status: 500 })
   }
 }
 

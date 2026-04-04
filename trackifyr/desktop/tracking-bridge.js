@@ -56,6 +56,8 @@ let lastFused = null
 let webcamEnabled = false
 /** @type {null | 'no_models' | 'exited'} */
 let webcamPipelineError = null
+/** Last stderr from webcam_cognitive_load (capped) for UI + debug */
+let lastWebcamStderr = ''
 /** @type {'combined' | 'activity' | 'webcam'} */
 let filterMode = 'combined'
 
@@ -132,6 +134,7 @@ function broadcastUpdate() {
     filterMode,
     webcamEnabled,
     webcamPipelineError,
+    webcamStderrTail: lastWebcamStderr.slice(-600),
   })
 }
 
@@ -323,6 +326,7 @@ function spawnWebcamPipeline() {
     return
   }
   webcamPipelineError = null
+  lastWebcamStderr = ''
   const py = pythonExecutable()
   const camIdx = String(process.env.TRACKIFYR_WEBCAM_INDEX ?? '0').trim() || '0'
   webcamProc = spawn(
@@ -357,7 +361,9 @@ function spawnWebcamPipeline() {
     // #endregion
   })
   webcamProc.stderr?.on('data', (d) => {
-    const s = String(d).trim()
+    const raw = String(d)
+    const s = raw.trim()
+    lastWebcamStderr = (lastWebcamStderr + raw).slice(-32000)
     if (s) console.error('[trackifyr webcam stderr]', s.slice(0, 800))
     // #region agent log
     if (s && !webcamStderrOnce) {
@@ -371,7 +377,14 @@ function spawnWebcamPipeline() {
       console.error('[trackifyr] webcam_cognitive_load exited', code, signal, 'cwd=', root)
     }
     // #region agent log
-    dbgAgent('H3', 'tracking-bridge:webcamProc', 'exit', { code, signal })
+    dbgAgent('H3', 'tracking-bridge:webcamProc', 'exit', {
+      code,
+      signal,
+      stderrTail: lastWebcamStderr.slice(-8000),
+    })
+    dbgAgent('H3', 'tracking-bridge:webcam_stderr', 'full_on_exit', {
+      text: lastWebcamStderr.slice(-12000),
+    })
     // #endregion
     webcamProc = null
     lastWebcam = null
@@ -501,6 +514,7 @@ function startHttpServer() {
         filterMode,
         webcamEnabled,
         webcamPipelineError,
+        webcamStderrTail: lastWebcamStderr.slice(-600),
       })
       return
     }
@@ -592,6 +606,7 @@ function registerIpc(ipcMain) {
     filterMode,
     webcamEnabled,
     webcamPipelineError,
+    webcamStderrTail: lastWebcamStderr.slice(-600),
   }))
 }
 

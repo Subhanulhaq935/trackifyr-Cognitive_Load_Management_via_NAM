@@ -51,8 +51,13 @@ export async function GET(request) {
         email: user.email,
       },
     })
-  } catch {
-    return NextResponse.json({ success: false }, { status: 500 })
+  } catch (err) {
+    console.error('[auth/me]', err)
+    const detail =
+      process.env.NODE_ENV === 'development' && err && typeof err.message === 'string'
+        ? err.message
+        : 'Server error'
+    return NextResponse.json({ success: false, error: detail }, { status: 500 })
   }
 }
 

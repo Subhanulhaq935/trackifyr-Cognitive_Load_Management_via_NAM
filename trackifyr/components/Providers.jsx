@@ -30,11 +30,16 @@ export default function Providers({ children }) {
     }
     send('H1', 'providers_mount', { href: typeof window !== 'undefined' ? window.location.href : '' })
     const onErr = (e) => {
+      const err = e && e.error
       send('H1', 'window_error', {
         msg: e.message,
         filename: e.filename,
         lineno: e.lineno,
         colno: e.colno,
+        name: err && err.name,
+        stack: err && err.stack ? String(err.stack).slice(0, 2000) : '',
+        targetSrc:
+          e.target && 'src' in e.target && e.target.src ? String(e.target.src).slice(0, 800) : '',
       })
     }
     const onRej = (e) => {
@@ -42,10 +47,10 @@ export default function Providers({ children }) {
         reason: String(e.reason && e.reason.message ? e.reason.message : e.reason),
       })
     }
-    window.addEventListener('error', onErr)
+    window.addEventListener('error', onErr, true)
     window.addEventListener('unhandledrejection', onRej)
     return () => {
-      window.removeEventListener('error', onErr)
+      window.removeEventListener('error', onErr, true)
       window.removeEventListener('unhandledrejection', onRej)
     }
   }, [])

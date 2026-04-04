@@ -334,11 +334,15 @@
       if (!trackingStatus) return
       const fused = payload && payload.fused
       const wpe = payload && payload.webcamPipelineError
+      const stderrTail = payload && payload.webcamStderrTail ? String(payload.webcamStderrTail) : ''
+      const stderrShort = stderrTail.replace(/\s+/g, ' ').trim().slice(0, 140)
       const prefix =
         wpe === 'no_models' ? 'ML missing · ' : wpe === 'exited' ? 'ML stopped · ' : ''
       if (!fused) {
         if (running && wpe === 'no_models') trackingStatus.textContent = 'ML missing'
-        else if (running) trackingStatus.textContent = ''
+        else if (running && wpe === 'exited' && stderrShort) {
+          trackingStatus.textContent = stderrShort
+        } else if (running) trackingStatus.textContent = ''
         return
       }
       const parts = [
@@ -346,7 +350,9 @@
         `Engagement ${fused.engagement != null ? fused.engagement : '—'}`,
         `Cognitive ${fused.final_cognitive_load}`,
       ]
-      trackingStatus.textContent = prefix + parts.join(' · ')
+      const lead =
+        wpe === 'exited' && stderrShort ? stderrShort + ' · ' : prefix
+      trackingStatus.textContent = lead + parts.join(' · ')
     })
   }
 

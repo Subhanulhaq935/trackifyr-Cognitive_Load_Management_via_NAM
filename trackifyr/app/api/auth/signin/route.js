@@ -91,8 +91,13 @@ export async function POST(req) {
     })
 
     return res
-  } catch {
-    return NextResponse.json({ success: false, error: 'Failed to sign in' }, { status: 500 })
+  } catch (err) {
+    console.error('[auth/signin]', err)
+    const detail =
+      process.env.NODE_ENV === 'development' && err && typeof err.message === 'string'
+        ? err.message
+        : 'Failed to sign in'
+    return NextResponse.json({ success: false, error: detail }, { status: 500 })
   }
 }
 
