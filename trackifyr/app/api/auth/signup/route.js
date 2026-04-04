@@ -1,13 +1,14 @@
 import bcrypt from 'bcryptjs'
 import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { ensureUsersTable } from '@/lib/usersSchema'
 
 export const runtime = 'nodejs'
 
 export async function POST(req) {
   try {
     const body = await req.json()
-    const { fullName, email, password, role } = body || {}
+    const { fullName, email, password } = body || {}
 
     if (!fullName || !email || !password) {
       return NextResponse.json(
@@ -20,25 +21,15 @@ export async function POST(req) {
 
     const passwordHash = await bcrypt.hash(String(password), 10)
 
-    // Ensure table exists (simple dev-time safety).
-    await query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        full_name TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'Student',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `)
+    await ensureUsersTable()
 
     const result = await query(
       `
-      INSERT INTO users (full_name, email, password_hash, role)
-      VALUES ($1, $2, $3, COALESCE($4, 'Student'))
-      RETURNING id, full_name, email, role
+      INSERT INTO users (full_name, email, password_hash)
+      VALUES ($1, $2, $3)
+      RETURNING id, full_name, email
     `,
-      [String(fullName).trim(), normalizedEmail, passwordHash, role],
+      [String(fullName).trim(), normalizedEmail, passwordHash],
     )
 
     const user = result.rows[0]
@@ -48,7 +39,6 @@ export async function POST(req) {
         id: user.id,
         fullName: user.full_name,
         email: user.email,
-        role: user.role,
       },
     })
   } catch (err) {

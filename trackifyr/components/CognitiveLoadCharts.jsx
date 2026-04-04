@@ -1,5 +1,5 @@
 /**
- * @fileoverview Cognitive load charts — only renders series passed in (no mock data).
+ * @fileoverview Cognitive load charts — activity % and engagement tier index (1–3) for the session.
  */
 
 'use client'
@@ -24,6 +24,13 @@ const TOOLTIP_STYLE = {
   borderRadius: '8px',
 }
 
+function tierIndexToLabel(v) {
+  if (v === 1) return 'Minor'
+  if (v === 2) return 'Moderate'
+  if (v === 3) return 'Major'
+  return '—'
+}
+
 function EmptyChart({ title, subtitle }) {
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-6">
@@ -41,9 +48,18 @@ function EmptyChart({ title, subtitle }) {
   )
 }
 
-export default function CognitiveLoadCharts({ loadSeries = [], dailySeries = [] }) {
+export default function CognitiveLoadCharts({
+  loadSeries = [],
+  dailySeries = [],
+  hasWeeklyData: hasWeeklyDataProp,
+}) {
   const hasLoad = Array.isArray(loadSeries) && loadSeries.length > 0
-  const hasDaily = Array.isArray(dailySeries) && dailySeries.length > 0
+  const hasDaily =
+    typeof hasWeeklyDataProp === 'boolean'
+      ? hasWeeklyDataProp
+      : Array.isArray(dailySeries) &&
+        dailySeries.length > 0 &&
+        dailySeries.some((d) => (d.sessions ?? 0) > 0 || (d.engagement ?? 0) > 0)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -52,7 +68,7 @@ export default function CognitiveLoadCharts({ loadSeries = [], dailySeries = [] 
           <div>
             <h2 className="text-xl font-bold text-gray-900">Cognitive load (session)</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Activity load and fused engagement % (from desktop model) while the app is sending data
+              Activity load (%) and engagement tier (Minor → Major) while the desktop app is sending data
             </p>
           </div>
         </div>
@@ -79,14 +95,31 @@ export default function CognitiveLoadCharts({ loadSeries = [], dailySeries = [] 
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="time" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 11, fill: '#6b7280' }} />
               <YAxis
-                label={{ value: 'Level (%)', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
+                yAxisId="left"
+                label={{ value: 'Activity %', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
                 tick={{ fontSize: 11, fill: '#6b7280' }}
                 domain={[0, 100]}
               />
-              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                label={{ value: 'Engagement tier', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }}
+                tick={{ fontSize: 11, fill: '#6b7280' }}
+                domain={[0.5, 3.5]}
+                ticks={[1, 2, 3]}
+                tickFormatter={(x) => tierIndexToLabel(x)}
+              />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                formatter={(value, name) => {
+                  if (name === 'Engagement tier') return [tierIndexToLabel(value), 'Engagement']
+                  return [value, name]
+                }}
+              />
               <Legend />
               <Area
-                type="monotone"
+                yAxisId="left"
+                type="stepAfter"
                 dataKey="load"
                 stroke="#6366f1"
                 strokeWidth={2.5}
@@ -95,12 +128,13 @@ export default function CognitiveLoadCharts({ loadSeries = [], dailySeries = [] 
                 dot={{ r: 3, fill: '#6366f1' }}
               />
               <Area
-                type="monotone"
-                dataKey="engagement"
+                yAxisId="right"
+                type="stepAfter"
+                dataKey="engagementTier"
                 stroke="#10b981"
                 strokeWidth={2.5}
                 fill="url(#colorEngagement)"
-                name="Engagement %"
+                name="Engagement tier"
                 dot={{ r: 3, fill: '#10b981' }}
               />
             </AreaChart>
@@ -109,25 +143,52 @@ export default function CognitiveLoadCharts({ loadSeries = [], dailySeries = [] 
       </div>
 
       {!hasDaily ? (
-        <EmptyChart title="Weekly aggregates" subtitle="Not available from the app yet" />
+        <EmptyChart
+          title="Weekly aggregates"
+          subtitle="Ingest tracking for a few minutes — 5-minute buckets roll up into the last 7 days here"
+        />
       ) : (
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-6">
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Weekly engagement</h2>
-            <p className="text-sm text-gray-500 mt-1">Aggregated sessions</p>
+            <h2 className="text-xl font-bold text-gray-900">Weekly aggregates</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Rolling 7 days (UTC days): average engagement score and number of 5-minute windows with data — updates
+              while you ingest
+            </p>
           </div>
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <BarChart data={dailySeries}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#6b7280' }} />
               <YAxis
-                label={{ value: 'Level (%)', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
+                yAxisId="eng"
+                label={{ value: 'Avg engagement (0–100)', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
                 tick={{ fontSize: 11, fill: '#6b7280' }}
+                domain={[0, 100]}
+              />
+              <YAxis
+                yAxisId="win"
+                orientation="right"
+                label={{ value: '5-min windows', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }}
+                tick={{ fontSize: 11, fill: '#6b7280' }}
+                allowDecimals={false}
               />
               <Tooltip contentStyle={TOOLTIP_STYLE} />
               <Legend />
-              <Bar dataKey="engagement" fill="#6366f1" name="Engagement %" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="sessions" fill="#10b981" name="Sessions" radius={[8, 8, 0, 0]} />
+              <Bar
+                yAxisId="eng"
+                dataKey="engagement"
+                fill="#6366f1"
+                name="Avg engagement"
+                radius={[8, 8, 0, 0]}
+              />
+              <Bar
+                yAxisId="win"
+                dataKey="sessions"
+                fill="#10b981"
+                name="5-min windows"
+                radius={[8, 8, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

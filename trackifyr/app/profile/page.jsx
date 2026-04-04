@@ -14,7 +14,6 @@ import Sidebar from '@/components/Sidebar'
 import Header from '@/components/Header'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const VALID_ROLES = ['Student', 'Teacher']
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -23,7 +22,6 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     email: user?.email || '',
-    role: user?.role || '',
   })
   const [errors, setErrors] = useState({})
 
@@ -38,7 +36,6 @@ export default function ProfilePage() {
       setFormData({
         fullName: user.fullName || '',
         email: user.email || '',
-        role: user.role || '',
       })
     }
   }, [user])
@@ -49,21 +46,17 @@ export default function ProfilePage() {
 
   const validateForm = () => {
     const newErrors = {}
-    
+
     if (!formData.fullName.trim()) {
       newErrors.fullName = 'Full Name is required'
     }
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required'
     } else if (!EMAIL_REGEX.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address'
     }
-    
-    if (!VALID_ROLES.includes(formData.role)) {
-      newErrors.role = 'Please select a valid role'
-    }
-    
+
     return newErrors
   }
 
@@ -116,7 +109,6 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-gray-900">{user?.fullName || 'User'}</h2>
-                  <p className="text-gray-600">{user?.role || 'Role'}</p>
                   <p className="text-sm text-gray-500 mt-1">{user?.email || 'email@example.com'}</p>
                 </div>
                 <button
@@ -177,29 +169,6 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    className={`w-full px-4 py-2 border rounded-lg ${
-                      isEditing
-                        ? errors.role
-                          ? 'border-red-300 focus:ring-2 focus:ring-red-500'
-                          : 'border-gray-300 focus:ring-2 focus:ring-indigo-500'
-                        : 'border-gray-200 bg-gray-50'
-                    }`}
-                  >
-                    <option value="Student">Student</option>
-                    <option value="Teacher">Teacher</option>
-                  </select>
-                  {errors.role && (
-                    <p className="mt-1 text-sm text-red-600">{errors.role}</p>
-                  )}
-                </div>
-
                 {errors.submit && (
                   <div className="pt-2 text-sm text-red-600">
                     {errors.submit}
@@ -223,6 +192,3 @@ export default function ProfilePage() {
     </div>
   )
 }
-
-
-

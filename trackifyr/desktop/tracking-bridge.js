@@ -92,6 +92,10 @@ function pickWebcamProba(w) {
   return w.cognitive_proba
 }
 
+function fusedWithMode(fused) {
+  return fused ? { ...fused, filter_mode: filterMode } : null
+}
+
 function tryFuse() {
   const act = lastActivity
   if (!act || typeof act.activity_percentage !== 'number') {
@@ -102,7 +106,7 @@ function tryFuse() {
   const w = lastWebcam
 
   if (filterMode === 'activity') {
-    lastFused = fuseTracking({
+    lastFused = fusedWithMode(fuseTracking({
       activity_percentage: actPct,
       final_model_load: 'Medium',
       blinks: 0,
@@ -110,7 +114,7 @@ function tryFuse() {
       face_detected: true,
       synthetic_webcam: true,
       webcam_ml_waiting: true,
-    })
+    }))
     broadcastUpdate()
     void pushToNextIngest()
     return
@@ -122,7 +126,7 @@ function tryFuse() {
       broadcastUpdate()
       return
     }
-    lastFused = fuseTracking({
+    lastFused = fusedWithMode(fuseTracking({
       activity_percentage: 0,
       final_model_load: w.final_model_load,
       blinks: w.blinks,
@@ -130,7 +134,7 @@ function tryFuse() {
       face_detected: w.face_detected,
       synthetic_webcam: false,
       cognitive_proba: pickWebcamProba(w),
-    })
+    }))
     broadcastUpdate()
     void pushToNextIngest()
     return
@@ -138,7 +142,7 @@ function tryFuse() {
 
   const noWebcamJson = !w || typeof w.final_model_load !== 'string'
   if (!webcamEnabled) {
-    lastFused = fuseTracking({
+    lastFused = fusedWithMode(fuseTracking({
       activity_percentage: actPct,
       final_model_load: 'Medium',
       blinks: 0,
@@ -146,9 +150,9 @@ function tryFuse() {
       face_detected: true,
       synthetic_webcam: true,
       webcam_ml_waiting: false,
-    })
+    }))
   } else if (noWebcamJson) {
-    lastFused = fuseTracking({
+    lastFused = fusedWithMode(fuseTracking({
       activity_percentage: actPct,
       final_model_load: 'Medium',
       blinks: 0,
@@ -156,9 +160,9 @@ function tryFuse() {
       face_detected: true,
       synthetic_webcam: true,
       webcam_ml_waiting: true,
-    })
+    }))
   } else {
-    lastFused = fuseTracking({
+    lastFused = fusedWithMode(fuseTracking({
       activity_percentage: actPct,
       final_model_load: w.final_model_load,
       blinks: w.blinks,
@@ -166,7 +170,7 @@ function tryFuse() {
       face_detected: w.face_detected,
       synthetic_webcam: false,
       cognitive_proba: pickWebcamProba(w),
-    })
+    }))
   }
   broadcastUpdate()
   void pushToNextIngest()
@@ -211,6 +215,65 @@ function stopChildren() {
   lastActivity = null
   lastWebcam = null
   lastFused = null
+  webcamEnabled = false
+}
+
+function spawnWebcamPipeline() {
+  if (webcamProc) return
+  const root = repoRoot()
+  const py = pythonExecutable()
+  webcamProc = spawn(
+    py,
+    [
+      'webcam_cognitive_load.py',
+      '--stream-json',
+      '--json-interval',
+      String(WEBCAM_JSON_INTERVAL),
+      '--device',
+      'auto',
+    ],
+    { cwd: root, env: process.env },
+  )
+  webcamProc.on('error', (err) => {
+    console.error('[trackifyr] webcam_cognitive_load spawn error', root, err && err.message)
+  })
+  wireStdoutJson(webcamProc, (j) => {
+    lastWebcam = j
+    tryFuse()
+  })
+}
+
+/**
+ * Turn ML webcam subprocess on/off without restarting activity tracking (for UI toggle while session runs).
+ * @param {boolean} enabled
+ */
+function setTrackingWebcam(enabled) {
+  const want = Boolean(enabled)
+  if (!activityProc) {
+    return { ok: false, activityActive: false, reason: 'not_tracking' }
+  }
+  if (webcamEnabled === want) {
+    return { ok: true, webcamEnabled, activityActive: true }
+  }
+  webcamEnabled = want
+  if (!want) {
+    if (webcamProc) {
+      try {
+        webcamProc.kill()
+      } catch {
+        /* ignore */
+      }
+      webcamProc = null
+    }
+    lastWebcam = null
+    tryFuse()
+  } else {
+    spawnWebcamPipeline()
+    tryFuse()
+  }
+  broadcastUpdate()
+  void pushToNextIngest()
+  return { ok: true, webcamEnabled, activityActive: true }
 }
 
 function startTracking(opts = {}) {
@@ -237,29 +300,21 @@ function startTracking(opts = {}) {
   })
 
   if (webcamEnabled) {
-    webcamProc = spawn(
-      py,
-      [
-        'webcam_cognitive_load.py',
-        '--stream-json',
-        '--json-interval',
-        String(WEBCAM_JSON_INTERVAL),
-        '--device',
-        'auto',
-      ],
-      { cwd: root, env: process.env },
-    )
-    wireStdoutJson(webcamProc, (j) => {
-      lastWebcam = j
-      tryFuse()
-    })
+    spawnWebcamPipeline()
   }
 
   broadcastUpdate()
 }
 
+/** Lets the dashboard (browser) POST filter changes to the local bridge. */
+const BRIDGE_CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
 function json(res, code, obj) {
-  res.writeHead(code, { 'Content-Type': 'application/json' })
+  res.writeHead(code, { ...BRIDGE_CORS, 'Content-Type': 'application/json' })
   res.end(JSON.stringify(obj))
 }
 
@@ -267,6 +322,11 @@ function startHttpServer() {
   if (httpServer) return
   httpServer = http.createServer((req, res) => {
     const u = String(req.url || '').split('?')[0]
+    if (req.method === 'OPTIONS' && u.startsWith('/bridge/')) {
+      res.writeHead(204, BRIDGE_CORS)
+      res.end()
+      return
+    }
     if (req.method === 'GET' && u === '/bridge/live') {
       json(res, 200, {
         ok: true,
@@ -336,6 +396,10 @@ function registerIpc(ipcMain) {
     broadcastUpdate()
     return { ok: true }
   })
+  ipcMain.handle('trackifyr:tracking:setWebcam', (_e, payload) => {
+    const on = Boolean(payload && payload.webcam)
+    return setTrackingWebcam(on)
+  })
   ipcMain.handle('trackifyr:tracking:setFilter', (_e, payload) => {
     const m = String((payload && payload.mode) || 'combined')
     if (m === 'activity' || m === 'webcam' || m === 'combined') filterMode = m
@@ -362,4 +426,5 @@ module.exports = {
   setIngestTokenGetter,
   startTracking,
   stopChildren,
+  setTrackingWebcam,
 }

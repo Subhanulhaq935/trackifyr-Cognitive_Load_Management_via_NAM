@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('trackifyr', {
   signout: (payload) => ipcRenderer.invoke('trackifyr:signout', payload),
   trackingStart: (payload) => ipcRenderer.invoke('trackifyr:tracking:start', payload),
   trackingStop: () => ipcRenderer.invoke('trackifyr:tracking:stop'),
+  trackingSetWebcam: (payload) => ipcRenderer.invoke('trackifyr:tracking:setWebcam', payload),
   trackingSetFilter: (payload) => ipcRenderer.invoke('trackifyr:tracking:setFilter', payload),
   trackingGetState: () => ipcRenderer.invoke('trackifyr:tracking:getState'),
   onTracking: (callback) => {

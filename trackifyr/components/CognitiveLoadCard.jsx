@@ -1,5 +1,5 @@
 /**
- * @fileoverview Cognitive load card — activity load + single fused engagement % from desktop model.
+ * @fileoverview Cognitive load card — activity load % + engagement tier (Major / Moderate / Minor).
  */
 
 'use client'
@@ -32,6 +32,12 @@ const DEFAULT_CONFIG = {
   progress: 'bg-gray-500',
 }
 
+const TIER_STYLES = {
+  Minor: 'ring-2 ring-orange-400 bg-orange-50 text-orange-900',
+  Moderate: 'ring-2 ring-purple-400 bg-purple-50 text-purple-900',
+  Major: 'ring-2 ring-blue-500 bg-blue-50 text-blue-900',
+}
+
 const getLevelConfig = (level) => {
   if (level == null || level === '') return DEFAULT_CONFIG
   return COGNITIVE_LOAD_LEVELS[level] || DEFAULT_CONFIG
@@ -40,7 +46,7 @@ const getLevelConfig = (level) => {
 export default function CognitiveLoadCard({
   level,
   value,
-  engagement,
+  engagementTier = null,
   webcamMlStatus = 'active',
   hasData = false,
   updatedAt = null,
@@ -48,8 +54,6 @@ export default function CognitiveLoadCard({
   const config = getLevelConfig(level)
   const safeValue =
     typeof value === 'number' && !Number.isNaN(value) ? Math.max(0, Math.min(100, value)) : null
-  const safeEngagement =
-    typeof engagement === 'number' && !Number.isNaN(engagement) ? Math.max(0, Math.min(100, engagement)) : null
 
   if (!hasData) {
     return (
@@ -78,7 +82,16 @@ export default function CognitiveLoadCard({
               <span className="text-sm font-semibold text-gray-700">Engagement</span>
               <span className="text-2xl font-bold text-gray-400">—</span>
             </div>
-            <div className="relative w-full bg-gray-200 rounded-full h-3 overflow-hidden" />
+            <div className="flex gap-2">
+              {['Minor', 'Moderate', 'Major'].map((t) => (
+                <span
+                  key={t}
+                  className="flex-1 text-center text-xs font-medium py-2 rounded-lg bg-gray-100 text-gray-400 border border-gray-200"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
         <div className="mt-5 pt-4 border-t border-gray-200 text-sm text-gray-500">Start tracking in the desktop app to see live metrics.</div>
@@ -126,19 +139,22 @@ export default function CognitiveLoadCard({
                   Starting webcam ML…
                 </span>
               ) : null}
-              <span className="text-2xl font-bold text-indigo-600">
-                {safeEngagement != null ? `${Math.round(safeEngagement)}%` : '—'}
-              </span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mb-3">
-            Fused score from the desktop pipeline (continuous — not limited to fixed 30 / 55 / 85).
-          </p>
-          <div className="relative w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-indigo-500 to-blue-500 h-3 rounded-full transition-all duration-1000"
-              style={{ width: `${safeEngagement ?? 0}%` }}
-            />
+          <p className="text-xs text-gray-500 mb-3">Derived from the webcam ensemble (Low / Medium / High mapped to Minor / Moderate / Major).</p>
+          <div className="grid grid-cols-3 gap-2">
+            {['Minor', 'Moderate', 'Major'].map((t) => (
+              <div
+                key={t}
+                className={`text-center text-sm font-semibold py-2.5 rounded-lg border transition-colors ${
+                  engagementTier === t
+                    ? TIER_STYLES[t] || 'bg-indigo-100 text-indigo-900 border-indigo-300'
+                    : 'bg-gray-50 text-gray-400 border-gray-200'
+                }`}
+              >
+                {t}
+              </div>
+            ))}
           </div>
         </div>
       </div>

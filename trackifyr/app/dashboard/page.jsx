@@ -16,17 +16,9 @@ import CognitiveLoadCard from '@/components/CognitiveLoadCard'
 import CognitiveLoadCharts from '@/components/CognitiveLoadCharts'
 import SessionLogsTable from '@/components/SessionLogsTable'
 import FeedbackPanel from '@/components/FeedbackPanel'
-
-/**
- * Single engagement % from desktop fusion (`engagement_score`) — continuous from the tracking model, not bucketed 30/55/85.
- */
-function engagementDisplayPercent(live) {
-  if (!live?.hasData) return null
-  if (typeof live.engagement_score === 'number' && !Number.isNaN(live.engagement_score)) {
-    return Math.max(0, Math.min(100, live.engagement_score))
-  }
-  return null
-}
+import { fusionEngagementToTier, fusionEngagementToTierIndex } from '@/lib/engagementTier'
+import { postTrackingFilterToBridge } from '@/lib/trackingBridgeClient'
+import { SESSION_LOG_PAGE_SIZE } from '@/lib/trackingConstants'
 
 const STATS_CARD_COLORS = {
   indigo: 'bg-indigo-100 text-indigo-600',
@@ -43,6 +35,10 @@ export default function DashboardPage() {
   const [lastUpdated, setLastUpdated] = useState(null)
   const [viewFilter, setViewFilter] = useState('combined')
   const [sessions, setSessions] = useState([])
+  const [sessionPage, setSessionPage] = useState(1)
+  const [sessionTotal, setSessionTotal] = useState(0)
+  const [sessionTotalPages, setSessionTotalPages] = useState(1)
+  const [weeklySeries, setWeeklySeries] = useState([])
 
   const fetchLive = useCallback(async () => {
     try {
@@ -58,15 +54,23 @@ export default function DashboardPage() {
     }
   }, [])
 
-  const fetchSessions = useCallback(async () => {
+  const fetchSessionsData = useCallback(async (page = 1) => {
     try {
-      const res = await fetch('/api/tracking/sessions', {
-        cache: 'no-store',
-        credentials: 'same-origin',
-      })
+      const res = await fetch(
+        `/api/tracking/sessions?page=${page}&limit=${SESSION_LOG_PAGE_SIZE}`,
+        {
+          cache: 'no-store',
+          credentials: 'same-origin',
+        },
+      )
       if (!res.ok) return
       const data = await res.json()
-      if (data?.ok && Array.isArray(data.sessions)) setSessions(data.sessions)
+      if (!data?.ok) return
+      if (Array.isArray(data.sessions)) setSessions(data.sessions)
+      if (typeof data.page === 'number') setSessionPage(data.page)
+      if (typeof data.total === 'number') setSessionTotal(data.total)
+      if (typeof data.totalPages === 'number') setSessionTotalPages(data.totalPages)
+      if (Array.isArray(data.weekly)) setWeeklySeries(data.weekly)
     } catch {
       /* ignore */
     }
@@ -81,17 +85,21 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isAuthenticated) return
     fetchLive()
-    fetchSessions()
+    void fetchSessionsData(sessionPage)
     const id = setInterval(fetchLive, 2500)
-    const idS = setInterval(fetchSessions, 15000)
+    const idS = setInterval(() => {
+      void fetchSessionsData(sessionPage)
+    }, 12000)
     return () => {
       clearInterval(id)
       clearInterval(idS)
     }
-  }, [isAuthenticated, fetchLive, fetchSessions])
+  }, [isAuthenticated, fetchLive, fetchSessionsData, sessionPage])
 
+  /** Desktop bridge (browser → 127.0.0.1) + API fallback so filter mode matches fused ingest. */
   useEffect(() => {
     if (!isAuthenticated) return
+    void postTrackingFilterToBridge(viewFilter)
     void fetch('/api/tracking/filter', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -106,15 +114,15 @@ export default function DashboardPage() {
     }
     setLastUpdated(Date.now())
     const label = new Date().toLocaleTimeString()
-    const eng = engagementDisplayPercent(live) ?? 0
+    const tierIdx = fusionEngagementToTierIndex(live.engagement)
     const row = {
       time: label,
       load: typeof live.activity_load === 'number' ? live.activity_load : 0,
-      engagement: eng,
+      engagementTier: tierIdx != null ? tierIdx : 2,
     }
     setChartSeries((prev) => {
       const last = prev[prev.length - 1]
-      if (last && last.load === row.load && last.engagement === row.engagement) {
+      if (last && last.load === row.load && last.engagementTier === row.engagementTier) {
         return prev
       }
       return [...prev, row].slice(-48)
@@ -128,13 +136,16 @@ export default function DashboardPage() {
   const hasData = Boolean(live?.hasData)
   const filterLabel =
     viewFilter === 'activity' ? 'Activity only' : viewFilter === 'webcam' ? 'Webcam only' : 'Combined'
-  const engPct = engagementDisplayPercent(live)
+  const engagementTier = hasData ? fusionEngagementToTier(live?.engagement) : null
+  const filterPending = Boolean(
+    hasData && live?.filter_mode && String(live.filter_mode) !== String(viewFilter),
+  )
 
   const statsCards = [
     {
       title: 'Activity load',
       value: hasData && typeof live.activity_load === 'number' ? `${Math.round(live.activity_load)}%` : '—',
-      change: hasData ? filterLabel : '—',
+      change: hasData ? `${filterLabel}${filterPending ? ' · updating…' : ''}` : '—',
       color: 'indigo',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,8 +155,8 @@ export default function DashboardPage() {
     },
     {
       title: 'Engagement',
-      value: hasData && engPct != null ? `${Math.round(engPct)}%` : '—',
-      change: hasData && live.engagement ? String(live.engagement) : '—',
+      value: engagementTier ?? '—',
+      change: hasData ? 'Tier' : '—',
       color: 'green',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,16 +176,16 @@ export default function DashboardPage() {
       ),
     },
     {
-      title: 'Blinks · Gaze away',
+      title: 'Total activity %',
       value:
-        hasData && (live.blinks != null || live.gaze_away != null)
-          ? `${live.blinks ?? '—'} · ${live.gaze_away ?? '—'}`
+        typeof live?.daily_avg_activity_pct === 'number' && !Number.isNaN(live.daily_avg_activity_pct)
+          ? `${Math.round(live.daily_avg_activity_pct)}%`
           : '—',
-      change: hasData ? 'Webcam interval' : '—',
+      change: 'Avg of all ingests today · resets 00:00 UTC',
       color: 'purple',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
         </svg>
       ),
     },
@@ -207,7 +218,9 @@ export default function DashboardPage() {
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className={`p-2 rounded-lg ${STATS_CARD_COLORS[stat.color] || 'bg-gray-100 text-gray-600'}`}>{stat.icon}</div>
-                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 text-gray-700">{stat.change}</span>
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 text-gray-700 max-w-[min(100%,140px)] truncate" title={stat.change}>
+                    {stat.change}
+                  </span>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-600 mb-0.5">{stat.title}</p>
@@ -239,19 +252,30 @@ export default function DashboardPage() {
               hasData={hasData}
               level={live?.final_cognitive_load ?? null}
               value={hasData && typeof live.activity_load === 'number' ? live.activity_load : null}
-              engagement={hasData ? engPct : null}
+              engagementTier={hasData ? engagementTier : null}
               webcamMlStatus={hasData ? live?.webcam_ml_status ?? 'active' : 'active'}
               updatedAt={lastUpdated}
             />
           </div>
 
           <div className="mb-4">
-            <CognitiveLoadCharts loadSeries={chartSeries} dailySeries={[]} />
+            <CognitiveLoadCharts
+              loadSeries={chartSeries}
+              dailySeries={weeklySeries}
+              hasWeeklyData={weeklySeries.some((d) => (d.sessions ?? 0) > 0 || (d.engagement ?? 0) > 0)}
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <SessionLogsTable sessions={sessions} />
+              <SessionLogsTable
+                sessions={sessions}
+                page={sessionPage}
+                totalPages={sessionTotalPages}
+                total={sessionTotal}
+                pageSize={SESSION_LOG_PAGE_SIZE}
+                onPageChange={(p) => setSessionPage(p)}
+              />
             </div>
             <div>
               <FeedbackPanel messages={[]} />

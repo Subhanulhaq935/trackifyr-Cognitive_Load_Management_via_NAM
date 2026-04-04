@@ -144,7 +144,8 @@
       running = true
       timerPulse.classList.add('active')
       btnTimerToggle.textContent = 'Pause'
-      timerHint.textContent = 'Running — tracking and dashboard sync are active. Pause to stop.'
+      timerHint.textContent =
+        'Running — activity + webcam ML (if on). Pause stops tracking and turns the webcam off. You can still toggle the webcam while running.'
     } else {
       if (runStart != null) accumulatedMs += performance.now() - runStart
       runStart = null
@@ -153,10 +154,10 @@
       rafId = null
       timerPulse.classList.remove('active')
       btnTimerToggle.textContent = 'Start'
-      timerHint.textContent =
-        accumulatedMs > 0
-          ? 'Paused — press Start to resume timer and tracking.'
-          : 'Start begins the session timer, activity tracking, and live sync to the web dashboard. Pause stops tracking.'
+    timerHint.textContent =
+      accumulatedMs > 0
+        ? 'Paused — press Start to resume timer and tracking (webcam turns on again).'
+        : 'Start begins the timer, enables the webcam if needed, and syncs to the dashboard. Pause stops tracking and turns the webcam off.'
     }
     timerDisplay.textContent = formatTime(currentElapsedMs())
     if (running) rafId = requestAnimationFrame(tick)
@@ -245,7 +246,7 @@
     timerPulse.classList.remove('active')
     btnTimerToggle.textContent = 'Start'
     timerHint.textContent =
-      'Start begins the session timer, activity tracking, and live sync to the web dashboard. Pause stops tracking.'
+      'Start begins the timer, turns the webcam on if needed, and syncs to the dashboard. Pause stops tracking and turns the webcam off.'
     try {
       if (window.trackifyr.trackingStop) await window.trackifyr.trackingStop()
     } catch {
@@ -265,24 +266,33 @@
         /* ignore */
       }
       if (trackingStatus) trackingStatus.textContent = ''
+      await setCamera(false)
       setTimeout(fitWindow, 80)
       return
     }
+    await setCamera(true)
     setTimerRunning(true)
     if (trackingStatus) trackingStatus.textContent = 'Waiting for first sample (up to ~10s)…'
-    const webcamMl = btnCamToggle.getAttribute('aria-checked') === 'true'
     try {
-      if (window.trackifyr.trackingStart) await window.trackifyr.trackingStart({ webcam: webcamMl })
+      if (window.trackifyr.trackingStart) await window.trackifyr.trackingStart({ webcam: true })
     } catch {
       setTimerRunning(false)
+      await setCamera(false)
       if (trackingStatus) trackingStatus.textContent = 'Could not start tracking. Check Python / permissions and try again.'
     }
     setTimeout(fitWindow, 80)
   })
 
-  btnCamToggle.addEventListener('click', () => {
+  btnCamToggle.addEventListener('click', async () => {
     const next = btnCamToggle.getAttribute('aria-checked') !== 'true'
-    setCamera(next)
+    await setCamera(next)
+    if (running && window.trackifyr.trackingSetWebcam) {
+      try {
+        await window.trackifyr.trackingSetWebcam({ webcam: next })
+      } catch {
+        /* ignore */
+      }
+    }
   })
 
   let offTracking = null
@@ -298,8 +308,6 @@
         `Load ${Number(fused.activity_load || 0).toFixed(1)}%`,
         `Engagement ${fused.engagement}`,
         `Cognitive ${fused.final_cognitive_load}`,
-        `Blinks ${fused.blinks}`,
-        `Gaze away ${fused.gaze_away}`,
       ]
       trackingStatus.textContent = parts.join(' · ')
     })

@@ -49,7 +49,7 @@ export default function UserProfileDropdown() {
       >
         <div className="text-right hidden sm:block">
           <p className="text-sm font-medium text-gray-900 leading-tight">{user?.fullName || 'User'}</p>
-          <p className="text-xs text-gray-500 leading-tight">{user?.role || 'Role'}</p>
+          <p className="text-xs text-gray-500 leading-tight truncate max-w-[140px]">{user?.email || ''}</p>
         </div>
         <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center text-white font-semibold shadow-sm ring-1 ring-white text-sm relative">
           {user?.fullName?.charAt(0) || 'U'}
@@ -71,8 +71,7 @@ export default function UserProfileDropdown() {
         <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-xl bg-white border border-gray-200 py-2 z-50 animate-in">
           <div className="px-4 py-3 border-b border-gray-100">
             <p className="text-sm font-semibold text-gray-900">{user?.fullName || 'User'}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{user?.email || 'email@example.com'}</p>
-            <p className="text-xs text-gray-500 mt-1">{user?.role || 'Role'}</p>
+            <p className="text-xs text-gray-500 mt-0.5 break-all">{user?.email || 'email@example.com'}</p>
           </div>
           
           <div className="py-1">

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { getSessionTokenFromRequest } from '@/lib/auth-session'
+import { ensureUsersTable } from '@/lib/usersSchema'
 
 export const runtime = 'nodejs'
 
@@ -11,17 +12,7 @@ export async function GET(request) {
       return NextResponse.json({ success: false }, { status: 401 })
     }
 
-    // Ensure tables exist (first-time dev safety).
-    await query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        full_name TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'Student',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `)
+    await ensureUsersTable()
 
     await query(`
       CREATE TABLE IF NOT EXISTS sessions (
@@ -38,8 +29,7 @@ export async function GET(request) {
       SELECT
         u.id,
         u.full_name,
-        u.email,
-        u.role
+        u.email
       FROM sessions s
       JOIN users u ON u.id = s.user_id
       WHERE s.token = $1 AND s.expires_at > now()
@@ -59,7 +49,6 @@ export async function GET(request) {
         id: user.id,
         fullName: user.full_name,
         email: user.email,
-        role: user.role,
       },
     })
   } catch {

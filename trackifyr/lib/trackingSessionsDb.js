@@ -1,4 +1,8 @@
 import { query } from '@/lib/db'
+import { fusionEngagementToTier } from '@/lib/engagementTier'
+import { SESSION_LOG_PAGE_SIZE, WEEKLY_ROLLING_DAYS } from '@/lib/trackingConstants'
+
+export { SESSION_LOG_PAGE_SIZE, WEEKLY_ROLLING_DAYS } from '@/lib/trackingConstants'
 
 export async function ensureTrackingBucketsTable() {
   await query(`
@@ -29,14 +33,22 @@ function engagementLabelToScore(label) {
 }
 
 /**
+ * Wall-clock 5-minute bucket start (UTC ms), aligned to [0,5,10,…] minute boundaries.
+ * All samples in one ingest fall into exactly one such bucket.
+ */
+export function fiveMinuteBucketStartUtcMs(nowMs = Date.now()) {
+  const ms = 5 * 60 * 1000
+  return Math.floor(nowMs / ms) * ms
+}
+
+/**
  * @param {object} body ingest payload (fused)
  */
 export async function mergeIngestIntoFiveMinuteBucket(userId, body) {
   if (!userId || !body || typeof body !== 'object') return
   await ensureTrackingBucketsTable()
 
-  const ms = 5 * 60 * 1000
-  const bucketStart = new Date(Math.floor(Date.now() / ms) * ms)
+  const bucketStart = new Date(fiveMinuteBucketStartUtcMs())
 
   const act = typeof body.activity_load === 'number' ? body.activity_load : 0
   const engScore =
@@ -88,11 +100,56 @@ function engagementFromAvgScore(s) {
 
 /**
  * @param {number} userId
- * @param {number} [limit]
- * @returns {Promise<Array<{ id: string, time: string, cognitiveLoad: string, engagement: string, duration: string, avgActivity: string }>>}
  */
-export async function listFiveMinuteSessionsForUser(userId, limit = 48) {
+export async function countFiveMinuteBucketsForUser(userId) {
   await ensureTrackingBucketsTable()
+  const r = await query(
+    `SELECT COUNT(*)::int AS c FROM tracking_five_minute_buckets WHERE user_id = $1`,
+    [userId],
+  )
+  return Number(r.rows[0]?.c) || 0
+}
+
+/**
+ * Mean activity_load (0–100) across every ingest sample for the current UTC calendar day.
+ * Uses the same sums as 5-minute buckets: SUM(sum_activity) / SUM(sample_count). Resets at 00:00 UTC.
+ * @param {number} userId
+ * @returns {Promise<number | null>}
+ */
+export async function getTodayAverageActivityPercent(userId) {
+  if (!userId) return null
+  await ensureTrackingBucketsTable()
+  const now = new Date()
+  const startUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0)
+  const endUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0)
+  const r = await query(
+    `
+    SELECT
+      COALESCE(SUM(sum_activity), 0)::double precision AS sa,
+      COALESCE(SUM(sample_count), 0)::bigint AS sc
+    FROM tracking_five_minute_buckets
+    WHERE user_id = $1
+      AND bucket_start >= $2::timestamptz
+      AND bucket_start < $3::timestamptz
+  `,
+    [userId, new Date(startUtc).toISOString(), new Date(endUtc).toISOString()],
+  )
+  const sc = Number(r.rows[0]?.sc) || 0
+  const sa = Number(r.rows[0]?.sa) || 0
+  if (sc <= 0) return null
+  return Math.max(0, Math.min(100, Math.round(sa / sc)))
+}
+
+/**
+ * @param {number} userId
+ * @param {number} limit
+ * @param {number} offset
+ * @returns {Promise<Array<{ id: string, bucketStart: string, time: string, cognitiveLoad: string, engagement: string, duration: string, avgActivity: string }>>}
+ */
+export async function listFiveMinuteSessionsForUser(userId, limit = SESSION_LOG_PAGE_SIZE, offset = 0) {
+  await ensureTrackingBucketsTable()
+  const lim = Math.min(Math.max(1, Number(limit) || SESSION_LOG_PAGE_SIZE), 100)
+  const off = Math.max(0, Number(offset) || 0)
   const r = await query(
     `
     SELECT
@@ -106,9 +163,9 @@ export async function listFiveMinuteSessionsForUser(userId, limit = 48) {
     FROM tracking_five_minute_buckets
     WHERE user_id = $1
     ORDER BY bucket_start DESC
-    LIMIT $2
+    LIMIT $2 OFFSET $3
   `,
-    [userId, limit],
+    [userId, lim, off],
   )
 
   return r.rows.map((row) => {
@@ -117,13 +174,83 @@ export async function listFiveMinuteSessionsForUser(userId, limit = 48) {
     const n = Math.max(1, Number(row.sample_count) || 1)
     const avgAct = Number(row.sum_activity) / n
     const avgEng = Number(row.sum_engagement_score) / n
+    const engLabel = engagementFromAvgScore(avgEng)
     return {
       id: String(row.bucket_start),
-      time: `${start.toLocaleString()} – ${end.toLocaleTimeString()}`,
+      bucketStart: start.toISOString(),
+      time: `${start.toLocaleString()} – ${end.toLocaleString()}`,
       cognitiveLoad: dominantCognitive(row),
-      engagement: engagementFromAvgScore(avgEng),
+      engagement: fusionEngagementToTier(engLabel) || engLabel,
       duration: '5 min',
       avgActivity: `${Math.round(avgAct)}%`,
     }
   })
+}
+
+/**
+ * Rolling last N days (UTC calendar days): avg engagement score and count of 5-minute buckets per day.
+ * @param {number} userId
+ * @param {number} [days]
+ * @returns {Promise<Array<{ day: string, engagement: number, sessions: number, avgActivity: number }>>}
+ */
+export async function listRollingDailyAggregatesForUser(userId, days = WEEKLY_ROLLING_DAYS) {
+  await ensureTrackingBucketsTable()
+  const nDays = Math.min(Math.max(1, Number(days) || WEEKLY_ROLLING_DAYS), 31)
+
+  const now = new Date()
+  const endUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0)
+  const startUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (nDays - 1), 0, 0, 0, 0)
+
+  const r = await query(
+    `
+    SELECT
+      (bucket_start AT TIME ZONE 'UTC')::date AS day_date,
+      SUM(sample_count)::bigint AS total_samples,
+      SUM(sum_activity)::double precision AS sum_act,
+      SUM(sum_engagement_score)::double precision AS sum_eng,
+      COUNT(*)::int AS bucket_count
+    FROM tracking_five_minute_buckets
+    WHERE user_id = $1
+      AND bucket_start >= $2::timestamptz
+      AND bucket_start < $3::timestamptz
+    GROUP BY 1
+    ORDER BY 1 ASC
+  `,
+    [userId, new Date(startUtc).toISOString(), new Date(endUtc).toISOString()],
+  )
+
+  const byDay = new Map()
+  for (const row of r.rows) {
+    const raw = row.day_date
+    const key =
+      raw instanceof Date
+        ? raw.toISOString().slice(0, 10)
+        : String(raw).length >= 10
+          ? String(raw).slice(0, 10)
+          : ''
+    if (!key) continue
+    const samples = Number(row.total_samples) || 0
+    const sumAct = Number(row.sum_act) || 0
+    const sumEng = Number(row.sum_eng) || 0
+    const buckets = Number(row.bucket_count) || 0
+    byDay.set(key, {
+      avgActivity: samples > 0 ? Math.round(sumAct / samples) : 0,
+      avgEngagement: samples > 0 ? Math.round(sumEng / samples) : 0,
+      sessions: buckets,
+    })
+  }
+
+  const out = []
+  for (let i = nDays - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i, 12, 0, 0, 0))
+    const key = d.toISOString().slice(0, 10)
+    const agg = byDay.get(key)
+    out.push({
+      day: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+      engagement: agg?.avgEngagement ?? 0,
+      sessions: agg?.sessions ?? 0,
+      avgActivity: agg?.avgActivity ?? 0,
+    })
+  }
+  return out
 }

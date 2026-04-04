@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { ensureUsersTable } from '@/lib/usersSchema'
 
 export const runtime = 'nodejs'
 
@@ -34,21 +35,11 @@ export async function POST(req) {
       );
     `)
 
-    // Make sure users table exists too (signin on fresh DB).
-    await query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        full_name TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'Student',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `)
+    await ensureUsersTable()
 
     const userRes = await query(
       `
-      SELECT id, full_name, email, password_hash, role
+      SELECT id, full_name, email, password_hash
       FROM users
       WHERE email = $1
       LIMIT 1
@@ -83,7 +74,6 @@ export async function POST(req) {
         id: user.id,
         fullName: user.full_name,
         email: user.email,
-        role: user.role,
       },
     }
     if (desktopClient) {
