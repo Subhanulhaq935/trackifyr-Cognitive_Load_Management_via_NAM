@@ -3,11 +3,15 @@
 const { test } = require('node:test')
 const assert = require('node:assert')
 const path = require('path')
-const { fuseTracking } = require(path.join(__dirname, '..', 'desktop', 'fusion.js'))
+const {
+  fuseTracking,
+  ACTIVITY_HIGH_THRESHOLD,
+  ACTIVITY_LOW_THRESHOLD,
+} = require(path.join(__dirname, '..', 'desktop', 'fusion.js'))
 
 test('high activity + high model => high', () => {
   const o = fuseTracking({
-    activity_percentage: 80,
+    activity_percentage: ACTIVITY_HIGH_THRESHOLD,
     final_model_load: 'High',
     blinks: 0,
     gaze_away: 0,
@@ -15,6 +19,30 @@ test('high activity + high model => high', () => {
   })
   assert.strictEqual(o.final_cognitive_load, 'High')
   assert.strictEqual(o.webcam_ml_status, 'active')
+})
+
+test('activity just below high threshold + high model => not fused High', () => {
+  const o = fuseTracking({
+    activity_percentage: ACTIVITY_HIGH_THRESHOLD - 1,
+    final_model_load: 'High',
+    blinks: 0,
+    gaze_away: 0,
+    face_detected: true,
+    synthetic_webcam: false,
+    cognitive_proba: [0.05, 0.15, 0.8],
+  })
+  assert.strictEqual(o.final_cognitive_load, 'Medium')
+})
+
+test('low activity + low model => Low final cognitive load', () => {
+  const o = fuseTracking({
+    activity_percentage: ACTIVITY_LOW_THRESHOLD - 1,
+    final_model_load: 'Low',
+    blinks: 0,
+    gaze_away: 0,
+    face_detected: true,
+  })
+  assert.strictEqual(o.final_cognitive_load, 'Low')
 })
 
 test('no face => engagement low', () => {

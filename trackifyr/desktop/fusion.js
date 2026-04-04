@@ -1,5 +1,10 @@
 'use strict'
 
+/** Activity % at or above this counts as "high" for final_cognitive_load fusion. */
+const ACTIVITY_HIGH_THRESHOLD = 70
+/** Activity % below this counts as "low" for final_cognitive_load fusion (40–69% is neither). */
+const ACTIVITY_LOW_THRESHOLD = 40
+
 /** Frames with gaze_away count at or above this are treated as "high gaze" for engagement. */
 const GAZE_AWAY_ENGAGEMENT_LOW = 12
 
@@ -88,8 +93,8 @@ function fuseTracking(input) {
   const webcam_ml_waiting = Boolean(input.webcam_ml_waiting)
   const modelProba = normalizeProba(input.cognitive_proba)
 
-  const highAct = activity_load >= 50
-  const lowAct = activity_load < 30
+  const highAct = activity_load >= ACTIVITY_HIGH_THRESHOLD
+  const lowAct = activity_load < ACTIVITY_LOW_THRESHOLD
   const mHigh = final_model_load === 'High'
   const mLow = final_model_load === 'Low'
 
@@ -164,6 +169,8 @@ function fuseTracking(input) {
 
 module.exports = {
   fuseTracking,
+  ACTIVITY_HIGH_THRESHOLD,
+  ACTIVITY_LOW_THRESHOLD,
   GAZE_AWAY_ENGAGEMENT_LOW,
   normalizeProba,
   engagementScoreFromModelProba,
