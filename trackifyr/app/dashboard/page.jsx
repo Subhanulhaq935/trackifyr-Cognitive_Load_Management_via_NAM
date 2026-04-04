@@ -1,12 +1,7 @@
 // codacy test trigger
 
-/**
- * @fileoverview Dashboard — live metrics from /api/tracking only (no mock data).
- */
-
 'use client'
 
-import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
@@ -17,11 +12,8 @@ import CognitiveLoadCharts from '@/components/CognitiveLoadCharts'
 import SessionLogsTable from '@/components/SessionLogsTable'
 import FeedbackPanel from '@/components/FeedbackPanel'
 import { fusionEngagementToTier } from '@/lib/engagementTier'
-import { postTrackingFilterToBridge } from '@/lib/trackingBridgeClient'
 import { SESSION_LOG_PAGE_SIZE } from '@/lib/trackingConstants'
 
-const DESKTOP_LINK = '/download?from=dashboard'
-/** Dashboard data refresh (live metrics, charts, session list poll). */
 const DASH_POLL_MS = 11000
 
 const STATS_CARD_COLORS = {
@@ -33,7 +25,7 @@ const STATS_CARD_COLORS = {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { isAuthenticated, user, isAuthLoading } = useAuth()
+  const { isAuthenticated, isAuthLoading } = useAuth()
   const [live, setLive] = useState(null)
   const [chartSeries, setChartSeries] = useState([])
   const [lastUpdated, setLastUpdated] = useState(null)
@@ -58,7 +50,6 @@ export default function DashboardPage() {
     }
   }, [])
 
-  /** Today's 5-min buckets for the cognitive load chart (PKT day), even when the desktop app is off. */
   const fetchDayChart = useCallback(async () => {
     try {
       const res = await fetch('/api/tracking/chart-day', {
@@ -87,7 +78,6 @@ export default function DashboardPage() {
     }
   }, [])
 
-  /** Session table only — `weekly=0` avoids the heavier weekly aggregation on every page change. */
   const fetchSessionsData = useCallback(async (page = 1) => {
     try {
       const res = await fetch(
@@ -147,15 +137,6 @@ export default function DashboardPage() {
     return () => clearInterval(idSessions)
   }, [isAuthenticated, fetchSessionsData])
 
-  /** Combined mode via browser → local Electron bridge (127.0.0.1). One POST after load; if the desktop app is closed, the fetch fails silently (DevTools may show connection refused). */
-  useEffect(() => {
-    if (!isAuthenticated) return
-    const t = setTimeout(() => {
-      void postTrackingFilterToBridge('combined')
-    }, 600)
-    return () => clearTimeout(t)
-  }, [isAuthenticated])
-
   useEffect(() => {
     if (!live || !live.hasData) {
       return
@@ -174,7 +155,7 @@ export default function DashboardPage() {
     {
       title: 'Activity load',
       value: hasData && typeof live.activity_load === 'number' ? `${Math.round(live.activity_load)}%` : '—',
-      change: hasData ? '~11s refresh' : '—',
+      change: '—',
       color: 'indigo',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -185,7 +166,7 @@ export default function DashboardPage() {
     {
       title: 'Engagement',
       value: engagementTier ?? '—',
-      change: hasData ? 'Webcam ML only' : '—',
+      change: '—',
       color: 'green',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,7 +177,7 @@ export default function DashboardPage() {
     {
       title: 'Final cognitive load',
       value: hasData && live.final_cognitive_load ? String(live.final_cognitive_load) : '—',
-      change: hasData ? 'Current (latest ingest)' : '—',
+      change: '—',
       color: 'blue',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,7 +191,7 @@ export default function DashboardPage() {
         typeof live?.daily_avg_activity_pct === 'number' && !Number.isNaN(live.daily_avg_activity_pct)
           ? `${Math.round(live.daily_avg_activity_pct)}%`
           : '—',
-      change: 'Resets 00:00 PKT',
+      change: '—',
       color: 'purple',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,21 +205,9 @@ export default function DashboardPage() {
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30">
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 lg:pl-64">
-        <Header title="Dashboard" subtitle={`Welcome back, ${user?.fullName?.split(' ')[0] || 'User'}! 👋`} />
+        <Header title="Dashboard" />
 
         <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="mb-4 text-sm text-gray-600">
-            Live metrics come only from the{' '}
-            <Link href={DESKTOP_LINK} className="font-semibold text-indigo-700 underline hover:text-indigo-900">
-              desktop app
-            </Link>{' '}
-            while it is running and ingesting (same account). If you close the app, numbers clear within about half a minute.{' '}
-            <Link href="/tracking-setup" className="text-indigo-600 underline hover:text-indigo-900">
-              Setup
-            </Link>
-            .
-          </p>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {statsCards.map((stat, index) => (
               <div

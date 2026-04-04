@@ -1,11 +1,5 @@
 export const runtime = 'nodejs'
 
-/**
- * Optional: forward filter mode to the local Electron bridge (127.0.0.1).
- * The Next.js server often cannot reach the user's machine (remote deploy) — always return JSON 200.
- * The dashboard should prefer POSTing directly to the bridge from the browser (`trackingBridgeClient`).
- */
-
 export async function GET() {
   return Response.json({
     ok: true,
@@ -45,7 +39,7 @@ export async function POST(request) {
         ok: false,
         mode,
         bridge: false,
-        reason: 'Bridge not reachable from this server (expected when the app runs on another host). Use the browser bridge client or run the desktop app locally.',
+        reason: 'bridge_unreachable',
       },
       { status: 200 },
     )

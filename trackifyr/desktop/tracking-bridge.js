@@ -15,8 +15,8 @@ function setIngestTokenGetter(fn) {
 }
 
 const DEFAULT_BRIDGE_PORT = Number(process.env.TRACKIFYR_BRIDGE_PORT || 47833)
-const ACTIVITY_INTERVAL_SEC = 10
-const WEBCAM_JSON_INTERVAL = 10
+const ACTIVITY_INTERVAL_SEC = Math.max(1, Number(process.env.TRACKIFYR_ACTIVITY_INTERVAL_SEC) || 5)
+const WEBCAM_JSON_INTERVAL = Math.max(1, Number(process.env.TRACKIFYR_WEBCAM_JSON_INTERVAL_SEC) || 5)
 
 let activityProc = null
 let webcamProc = null
@@ -47,6 +47,14 @@ function repoRoot() {
 
 function pythonExecutable() {
   return (process.env.TRACKIFYR_PYTHON || 'python').trim() || 'python'
+}
+
+function pythonEnv() {
+  return {
+    ...process.env,
+    PYTHONUNBUFFERED: '1',
+    PYTHONIOENCODING: 'utf-8',
+  }
 }
 
 function broadcastUpdate() {
@@ -222,17 +230,21 @@ function spawnWebcamPipeline() {
   if (webcamProc) return
   const root = repoRoot()
   const py = pythonExecutable()
+  const camIdx = String(process.env.TRACKIFYR_WEBCAM_INDEX ?? '0').trim() || '0'
   webcamProc = spawn(
     py,
     [
+      '-u',
       'webcam_cognitive_load.py',
       '--stream-json',
       '--json-interval',
       String(WEBCAM_JSON_INTERVAL),
+      '--camera',
+      camIdx,
       '--device',
       'auto',
     ],
-    { cwd: root, env: process.env },
+    { cwd: root, env: pythonEnv(), windowsHide: true },
   )
   webcamProc.on('error', (err) => {
     console.error('[trackifyr] webcam_cognitive_load spawn error', root, err && err.message)
@@ -295,10 +307,11 @@ function startTracking(opts = {}) {
   const root = repoRoot()
   const py = pythonExecutable()
 
-  activityProc = spawn(py, ['activity_tracker.py', '--interval', String(ACTIVITY_INTERVAL_SEC)], {
-    cwd: root,
-    env: process.env,
-  })
+  activityProc = spawn(
+    py,
+    ['-u', 'activity_tracker.py', '--interval', String(ACTIVITY_INTERVAL_SEC)],
+    { cwd: root, env: pythonEnv(), windowsHide: true },
+  )
   activityProc.on('error', (err) => {
     console.error('[trackifyr] activity_tracker spawn error', root, err && err.message)
   })

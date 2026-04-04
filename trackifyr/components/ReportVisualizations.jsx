@@ -1,7 +1,3 @@
-/**
- * @fileoverview Extra charts for Reports — cognitive mix, per-window activity, weekly activity trend.
- */
-
 'use client'
 
 import {
@@ -81,19 +77,17 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
   if (!hasPie && !hasActivityBars && !hasTrend && !hasWeekly) {
     return (
       <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 p-8 text-center text-sm text-gray-500 mb-6">
-        No chart data yet — ingest tracking from the desktop app to see distributions and trends.
+        No data
       </div>
     )
   }
 
   return (
     <div className="space-y-6 mb-8">
-      <h2 className="text-lg font-semibold text-gray-900">Visual analytics</h2>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {hasPie ? (
           <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-gray-800 mb-1">Cognitive load mix (today, PKT)</h3>
-            <p className="text-xs text-gray-500 mb-4">Share of 5-minute windows by dominant level</p>
+            <h3 className="text-sm font-semibold text-gray-800 mb-3">Cognitive load</h3>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -120,8 +114,7 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
 
         {hasActivityBars ? (
           <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-gray-800 mb-1">Avg activity by window (today)</h3>
-            <p className="text-xs text-gray-500 mb-4">Each bar is one 5-minute bucket (PKT)</p>
+            <h3 className="text-sm font-semibold text-gray-800 mb-3">Activity by window</h3>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={activityBars} margin={{ top: 8, right: 8, left: 0, bottom: 64 }}>
@@ -138,8 +131,7 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
 
         {hasTrend ? (
           <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
-            <h3 className="text-sm font-semibold text-gray-800 mb-1">Activity load over the PKT day</h3>
-            <p className="text-xs text-gray-500 mb-4">Line follows stored 5-minute buckets (same series as dashboard)</p>
+            <h3 className="text-sm font-semibold text-gray-800 mb-3">Activity (PKT day)</h3>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={activityTrend} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
@@ -157,8 +149,7 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
 
         {hasWeekly ? (
           <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
-            <h3 className="text-sm font-semibold text-gray-800 mb-1">7-day trend (PKT)</h3>
-            <p className="text-xs text-gray-500 mb-4">Average activity % (line) and 5-minute windows with data (bars)</p>
+            <h3 className="text-sm font-semibold text-gray-800 mb-3">7 days</h3>
             <div style={{ height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={weeklyTrend} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>

@@ -17,7 +17,6 @@
   const formLogin = document.getElementById('form-login')
   const inputEmail = document.getElementById('input-email')
   const inputPassword = document.getElementById('input-password')
-  const loginApiHint = document.getElementById('login-api-hint')
   const loginError = document.getElementById('login-error')
   const btnLogin = document.getElementById('btn-login')
   const btnLoginText = btnLogin.querySelector('.btn-text')
@@ -45,10 +44,6 @@
 
   await syncTrackingPipelineConfig()
 
-  if (loginApiHint) {
-    loginApiHint.textContent = `Server: ${getApiBase()}`
-  }
-
   function fitWindow() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -71,7 +66,6 @@
     return `${pad(h)}:${pad(m)}:${pad(sec)}`
   }
 
-  /** Wall clock in Pakistan time (fixed +05:00), independent of OS timezone. */
   function formatPktWallClock() {
     return new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Asia/Karachi',
@@ -174,16 +168,10 @@
     if (running) rafId = requestAnimationFrame(tick)
   }
 
-  /**
-   * Webcam ML runs in a Python subprocess (OpenCV) — do not call getUserMedia here.
-   * On Windows/macOS, only one process can open the camera; grabbing it in Chromium
-   * blocks the ML pipeline and you get no cognitive-load JSON.
-   */
   async function setCamera(on) {
     if (on) {
       btnCamToggle.setAttribute('aria-checked', 'true')
-      cameraStatus.textContent =
-        'Webcam ML on — analysis opens the camera (Python). Close other apps using the camera.'
+      cameraStatus.textContent = ''
       cameraStatus.classList.add('on')
     } else {
       btnCamToggle.setAttribute('aria-checked', 'false')
@@ -266,13 +254,13 @@
     }
     await setCamera(true)
     setTimerRunning(true)
-    if (trackingStatus) trackingStatus.textContent = 'Waiting for first sample (up to ~10s)…'
+    if (trackingStatus) trackingStatus.textContent = ''
     try {
       if (window.trackifyr.trackingStart) await window.trackifyr.trackingStart({ webcam: true })
     } catch {
       setTimerRunning(false)
       await setCamera(false)
-      if (trackingStatus) trackingStatus.textContent = 'Could not start tracking. Check Python / permissions and try again.'
+      if (trackingStatus) trackingStatus.textContent = 'Error.'
     }
     setTimeout(fitWindow, 80)
   })
@@ -295,7 +283,7 @@
       const fused = payload && payload.fused
       if (!trackingStatus) return
       if (!fused) {
-        if (running) trackingStatus.textContent = 'Waiting for data…'
+        if (running) trackingStatus.textContent = ''
         return
       }
       const parts = [

@@ -1,11 +1,3 @@
-/**
- * Browser → local Electron bridge (same machine as the desktop app).
- * Server-side /api/tracking/filter cannot reach the user's bridge when Next runs remotely.
- *
- * When the Trackifyr desktop app is closed, `fetch` to 127.0.0.1 fails (connection refused)
- * in DevTools — that is expected; it is not a Next.js bug.
- */
-
 const DEFAULT_PORT = '47833'
 
 export function getTrackingBridgeOrigin() {
@@ -14,10 +6,6 @@ export function getTrackingBridgeOrigin() {
   return `http://127.0.0.1:${String(port)}`
 }
 
-/**
- * @param {'combined' | 'activity' | 'webcam'} mode
- * @returns {Promise<boolean>} true if bridge accepted the mode
- */
 export async function postTrackingFilterToBridge(mode) {
   const m = mode === 'activity' || mode === 'webcam' ? mode : 'combined'
   try {

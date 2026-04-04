@@ -1,7 +1,3 @@
-/**
- * @fileoverview Reports — charts match dashboard data; PDF export for daily / weekly PKT summaries.
- */
-
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
@@ -29,7 +25,7 @@ function dominantCognitiveLabel(rows) {
 
 export default function ReportsPage() {
   const router = useRouter()
-  const { isAuthenticated, user, isAuthLoading } = useAuth()
+  const { isAuthenticated, isAuthLoading } = useAuth()
   const [chartSeries, setChartSeries] = useState([])
   const [weeklySeries, setWeeklySeries] = useState([])
   const [dailyReport, setDailyReport] = useState(null)
@@ -114,15 +110,11 @@ export default function ReportsPage() {
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30">
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 lg:pl-64">
-        <Header title="Reports & Analytics" subtitle={user?.fullName ? `Signed in as ${user.fullName}` : undefined} />
+        <Header title="Reports & Analytics" />
 
         <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="mb-6 rounded-2xl border border-indigo-100 bg-white/90 p-5 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900">Export PDF (PKT)</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              PDFs include summary text plus simple charts (activity sparkline, cognitive mix, weekly bars). Same data
-              as below — daily lists every 5-minute window today; weekly summarizes the last seven PKT days.
-            </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
@@ -148,17 +140,14 @@ export default function ReportsPage() {
             <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-100 p-6">
               <p className="text-sm font-medium text-gray-600 mb-2">Average activity (today, PKT)</p>
               <p className="text-3xl font-bold text-gray-900">{dayAvg}</p>
-              <p className="text-xs text-gray-500 mt-2">Mean across all samples ingested today</p>
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-100 p-6">
               <p className="text-sm font-medium text-gray-600 mb-2">Dominant cognitive load (today)</p>
               <p className="text-3xl font-bold text-gray-900">{dominantCognitiveLabel(dailyRows)}</p>
-              <p className="text-xs text-gray-500 mt-2">Most frequent level across 5-minute windows</p>
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-100 p-6">
               <p className="text-sm font-medium text-gray-600 mb-2">5-minute windows (rolling 7 PKT days)</p>
               <p className="text-3xl font-bold text-gray-900">{weeklyWindows}</p>
-              <p className="text-xs text-gray-500 mt-2">Total windows with data in the weekly chart</p>
             </div>
           </div>
 
@@ -169,7 +158,7 @@ export default function ReportsPage() {
           />
 
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Detailed charts (dashboard parity)</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Charts</h2>
             <CognitiveLoadCharts
               loadSeries={chartSeries}
               dailySeries={weeklySeries}
