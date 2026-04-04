@@ -21,26 +21,6 @@
   }
   // #endregion
 
-  async function preflightCameraThenRelease() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: false,
-      })
-      stream.getTracks().forEach((t) => t.stop())
-      await new Promise((r) => {
-        requestAnimationFrame(() => requestAnimationFrame(r))
-      })
-      dbgAgent('H6', 'renderer:preflightCamera', 'tracks_stopped', {})
-    } catch (e) {
-      dbgAgent('H6', 'renderer:preflightCamera', 'getUserMedia_error', {
-        name: e && e.name,
-        msg: e && e.message ? String(e.message) : String(e),
-      })
-    }
-  }
-
   const LS_TOKEN = 'trackifyr_desktop_session_token'
   const LS_USER = 'trackifyr_desktop_user'
   const LS_API_LEGACY = 'trackifyr_desktop_api_base'
@@ -298,10 +278,11 @@
     setTimerRunning(true)
     if (trackingStatus) trackingStatus.textContent = ''
     try {
-      await preflightCameraThenRelease()
-      // Let the OS / driver release the camera after Chromium stops the stream
-      // before OpenCV opens it (avoids flaky capture on Windows).
-      await new Promise((r) => setTimeout(r, 500))
+      if (window.trackifyr.requestCameraAccess) {
+        await window.trackifyr.requestCameraAccess()
+      }
+      // Webcam ML uses Python/OpenCV, not this stream — avoid opening the camera here so it
+      // is not held exclusively by Chromium before OpenCV starts.
       if (window.trackifyr.trackingStart) await window.trackifyr.trackingStart({ webcam: true })
       // #region agent log
       dbgAgent('H2', 'renderer:btnTimerToggle', 'trackingStart_resolved', {})
@@ -347,7 +328,8 @@
       if (!fused) {
         if (running && wpe === 'no_models') trackingStatus.textContent = 'ML models missing (install artifacts/daisee)'
         else if (running && wpe === 'exited') {
-          trackingStatus.textContent = 'Webcam ML stopped — check camera permissions and that no other app uses the camera'
+          trackingStatus.textContent =
+            'Webcam ML stopped — ensure Python has torch/opencv/mediapipe (pip install -r requirements.txt), Windows camera privacy allows desktop apps, and only one app uses the camera'
         } else if (running) trackingStatus.textContent = ''
         return
       }

@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('trackifyr', {
   trackingSetWebcam: (payload) => ipcRenderer.invoke('trackifyr:tracking:setWebcam', payload),
   trackingSetFilter: (payload) => ipcRenderer.invoke('trackifyr:tracking:setFilter', payload),
   trackingGetState: () => ipcRenderer.invoke('trackifyr:tracking:getState'),
+  requestCameraAccess: () => ipcRenderer.invoke('trackifyr:requestCameraAccess'),
   onTracking: (callback) => {
     const fn = (_event, data) => {
       callback(data)

@@ -3,7 +3,7 @@
 const fs = require('fs')
 const http = require('http')
 const path = require('path')
-const { spawn } = require('child_process')
+const { spawn, spawnSync } = require('child_process')
 const readline = require('readline')
 const { fuseTracking } = require('./fusion.js')
 
@@ -47,6 +47,13 @@ function setIngestTokenGetter(fn) {
 const DEFAULT_BRIDGE_PORT = Number(process.env.TRACKIFYR_BRIDGE_PORT || 47833)
 const ACTIVITY_INTERVAL_SEC = Math.max(1, Number(process.env.TRACKIFYR_ACTIVITY_INTERVAL_SEC) || 5)
 const WEBCAM_JSON_INTERVAL = Math.max(1, Number(process.env.TRACKIFYR_WEBCAM_JSON_INTERVAL_SEC) || 5)
+const WEBCAM_RELAUNCH_MS = Math.max(500, Number(process.env.TRACKIFYR_WEBCAM_RELAUNCH_MS) || 2000)
+const WEBCAM_RELAUNCH_MAX = Math.max(0, Number(process.env.TRACKIFYR_WEBCAM_RELAUNCH_MAX) || 5)
+
+/** @type {{ cmd: string, prefixArgs: string[] } | null} */
+let resolvedPythonCmd = null
+let webcamRelaunchTimer = null
+let webcamRelaunchAttempts = 0
 
 let activityProc = null
 let webcamProc = null
@@ -108,6 +115,56 @@ function hasWebcamModels(root) {
 
 function pythonExecutable() {
   return (process.env.TRACKIFYR_PYTHON || 'python').trim() || 'python'
+}
+
+/**
+ * Pick a working `python` / `py -3` (Windows) once per process so subprocesses match.
+ * Respects TRACKIFYR_PYTHON if set (first token = exe, rest = prefix args).
+ */
+function resolvePythonCommand() {
+  if (resolvedPythonCmd) return resolvedPythonCmd
+  const envLine = String(process.env.TRACKIFYR_PYTHON || '').trim()
+  if (envLine) {
+    const parts = envLine.split(/\s+/).filter(Boolean)
+    resolvedPythonCmd = { cmd: parts[0], prefixArgs: parts.slice(1) }
+    console.log('[trackifyr] Python from TRACKIFYR_PYTHON:', resolvedPythonCmd.cmd, resolvedPythonCmd.prefixArgs)
+    return resolvedPythonCmd
+  }
+  const candidates =
+    process.platform === 'win32'
+      ? [
+          ['py', ['-3']],
+          ['python', []],
+          ['py', []],
+        ]
+      : [
+          ['python3', []],
+          ['python', []],
+        ]
+  for (const [cmd, prefixArgs] of candidates) {
+    try {
+      const r = spawnSync(cmd, [...prefixArgs, '-c', 'print(1)'], {
+        encoding: 'utf8',
+        windowsHide: true,
+        timeout: 12000,
+      })
+      if (r.status === 0 && !r.error) {
+        resolvedPythonCmd = { cmd, prefixArgs }
+        console.log('[trackifyr] resolved Python:', cmd, prefixArgs.join(' '))
+        return resolvedPythonCmd
+      }
+    } catch {
+      /* try next */
+    }
+  }
+  resolvedPythonCmd = { cmd: process.platform === 'win32' ? 'python' : 'python3', prefixArgs: [] }
+  console.warn('[trackifyr] could not probe Python; falling back to', resolvedPythonCmd.cmd)
+  return resolvedPythonCmd
+}
+
+function pythonSpawnArgs(scriptName, scriptArgs) {
+  const { cmd, prefixArgs } = resolvePythonCommand()
+  return { cmd, args: [...prefixArgs, '-u', scriptName, ...scriptArgs] }
 }
 
 function pythonEnv(cwdRoot) {
@@ -274,6 +331,15 @@ function safeJsonLine(line) {
 }
 
 function stopChildren() {
+  if (webcamRelaunchTimer) {
+    try {
+      clearTimeout(webcamRelaunchTimer)
+    } catch {
+      /* ignore */
+    }
+    webcamRelaunchTimer = null
+  }
+  webcamRelaunchAttempts = 0
   if (activityProc) {
     try {
       activityProc.kill()
@@ -295,6 +361,23 @@ function stopChildren() {
   lastFused = null
   webcamEnabled = false
   webcamPipelineError = null
+}
+
+function scheduleWebcamRelaunch() {
+  if (!webcamEnabled) return
+  if (webcamProc) return
+  if (webcamRelaunchAttempts >= WEBCAM_RELAUNCH_MAX) {
+    console.warn('[trackifyr] webcam ML: max relaunch attempts reached')
+    return
+  }
+  webcamRelaunchAttempts += 1
+  if (webcamRelaunchTimer) clearTimeout(webcamRelaunchTimer)
+  webcamRelaunchTimer = setTimeout(() => {
+    webcamRelaunchTimer = null
+    if (!webcamEnabled || webcamProc) return
+    console.warn('[trackifyr] relaunching webcam ML subprocess, attempt', webcamRelaunchAttempts)
+    spawnWebcamPipeline()
+  }, WEBCAM_RELAUNCH_MS)
 }
 
 function spawnWebcamPipeline() {
@@ -327,31 +410,25 @@ function spawnWebcamPipeline() {
   }
   webcamPipelineError = null
   lastWebcamStderr = ''
-  const py = pythonExecutable()
   const camIdx = String(process.env.TRACKIFYR_WEBCAM_INDEX ?? '0').trim() || '0'
-  webcamProc = spawn(
-    py,
-    [
-      '-u',
-      'webcam_cognitive_load.py',
-      '--stream-json',
-      '--json-interval',
-      String(WEBCAM_JSON_INTERVAL),
-      '--camera',
-      camIdx,
-      '--device',
-      'auto',
-      '--v1-model',
-      modelPaths.v1,
-      '--v2-model',
-      modelPaths.v2,
-      '--v3-model',
-      modelPaths.v3,
-    ],
-    { cwd: root, env: pythonEnv(root), windowsHide: true },
-  )
+  const { cmd: pyCmd, args: pyArgs } = pythonSpawnArgs('webcam_cognitive_load.py', [
+    '--stream-json',
+    '--json-interval',
+    String(WEBCAM_JSON_INTERVAL),
+    '--camera',
+    camIdx,
+    '--device',
+    'auto',
+    '--v1-model',
+    modelPaths.v1,
+    '--v2-model',
+    modelPaths.v2,
+    '--v3-model',
+    modelPaths.v3,
+  ])
+  webcamProc = spawn(pyCmd, pyArgs, { cwd: root, env: pythonEnv(root), windowsHide: true })
   // #region agent log
-  dbgAgent('H2', 'tracking-bridge:spawnWebcamPipeline', 'spawned', { pid: webcamProc.pid, py, camIdx })
+  dbgAgent('H2', 'tracking-bridge:spawnWebcamPipeline', 'spawned', { pid: webcamProc.pid, py: pyCmd, camIdx })
   let webcamStderrOnce = false
   // #endregion
   webcamProc.on('error', (err) => {
@@ -359,6 +436,17 @@ function spawnWebcamPipeline() {
     // #region agent log
     dbgAgent('H3', 'tracking-bridge:webcamProc', 'spawn_error', { msg: err && err.message })
     // #endregion
+    webcamProc = null
+    lastWebcam = null
+    if (webcamEnabled) {
+      lastWebcamStderr = (
+        lastWebcamStderr + String((err && err.message) || err || 'spawn error')
+      ).slice(-32000)
+      webcamPipelineError = 'exited'
+      scheduleWebcamRelaunch()
+      tryFuse()
+      broadcastUpdate()
+    }
   })
   webcamProc.stderr?.on('data', (d) => {
     const raw = String(d)
@@ -390,6 +478,7 @@ function spawnWebcamPipeline() {
     lastWebcam = null
     if (code != null && code !== 0 && webcamEnabled) {
       webcamPipelineError = 'exited'
+      scheduleWebcamRelaunch()
     }
     tryFuse()
     broadcastUpdate()
@@ -397,6 +486,15 @@ function spawnWebcamPipeline() {
   let webcamJsonLines = 0
   wireStdoutJson(webcamProc, (j) => {
     webcamJsonLines += 1
+    webcamRelaunchAttempts = 0
+    if (webcamRelaunchTimer) {
+      try {
+        clearTimeout(webcamRelaunchTimer)
+      } catch {
+        /* ignore */
+      }
+      webcamRelaunchTimer = null
+    }
     // #region agent log
     if (webcamJsonLines === 1) {
       dbgAgent('H4', 'tracking-bridge:webcam_stdout', 'first_json', {
@@ -448,13 +546,10 @@ function startTracking(opts = {}) {
   stopChildren()
   webcamEnabled = Boolean(opts.webcam)
   const root = repoRoot()
-  const py = pythonExecutable()
+  resolvePythonCommand()
+  const actSpawn = pythonSpawnArgs('activity_tracker.py', ['--interval', String(ACTIVITY_INTERVAL_SEC)])
 
-  activityProc = spawn(
-    py,
-    ['-u', 'activity_tracker.py', '--interval', String(ACTIVITY_INTERVAL_SEC)],
-    { cwd: root, env: pythonEnv(root), windowsHide: true },
-  )
+  activityProc = spawn(actSpawn.cmd, actSpawn.args, { cwd: root, env: pythonEnv(root), windowsHide: true })
   activityProc.on('error', (err) => {
     console.error('[trackifyr] activity_tracker spawn error', root, err && err.message)
   })

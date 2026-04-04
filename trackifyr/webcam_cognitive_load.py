@@ -45,6 +45,9 @@ def open_webcam(camera_index: int):
         attempts = []
         if win:
             attempts.append((idx, cv2.CAP_DSHOW))
+            # Media Foundation — often works when DirectShow does not (Windows 10+).
+            if hasattr(cv2, "CAP_MSMF"):
+                attempts.append((idx, cv2.CAP_MSMF))
         attempts.append((idx, None))
 
         for _i, api in attempts:

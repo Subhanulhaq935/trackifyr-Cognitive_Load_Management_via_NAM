@@ -1,7 +1,7 @@
 /**
  * API origin: TRACKIFYR_API_BASE env and/or release-config.json { "apiBase": "https://..." } next to main.js.
  */
-const { app, BrowserWindow, ipcMain, session, Menu } = require('electron')
+const { app, BrowserWindow, ipcMain, session, Menu, systemPreferences } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
@@ -167,15 +167,44 @@ function installAppMenu() {
 }
 
 app.whenReady().then(() => {
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
     // #region agent log
-    dbgMain('H6', 'permission_request', { permission })
+    dbgMain('H6', 'permission_request', { permission, details })
     // #endregion
-    if (permission === 'media' || permission === 'camera') {
+    if (
+      permission === 'media' ||
+      permission === 'camera' ||
+      permission === 'display-capture' ||
+      permission === 'audioCapture'
+    ) {
       callback(true)
       return
     }
     callback(false)
+  })
+
+  session.defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    if (
+      permission === 'media' ||
+      permission === 'camera' ||
+      permission === 'display-capture' ||
+      permission === 'audioCapture'
+    ) {
+      return true
+    }
+    return false
+  })
+
+  ipcMain.handle('trackifyr:requestCameraAccess', async () => {
+    try {
+      if (process.platform === 'darwin') {
+        const granted = await systemPreferences.askForMediaAccess('camera')
+        return { ok: true, granted }
+      }
+    } catch (e) {
+      console.warn('[trackifyr] askForMediaAccess', e && e.message)
+    }
+    return { ok: true, granted: true }
   })
 
   ipcMain.handle('trackifyr:debugLog', (_e, payload) => {
