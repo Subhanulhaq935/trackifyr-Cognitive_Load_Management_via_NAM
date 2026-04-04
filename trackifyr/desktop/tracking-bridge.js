@@ -237,6 +237,19 @@ function spawnWebcamPipeline() {
   webcamProc.on('error', (err) => {
     console.error('[trackifyr] webcam_cognitive_load spawn error', root, err && err.message)
   })
+  webcamProc.stderr?.on('data', (d) => {
+    const s = String(d).trim()
+    if (s) console.error('[trackifyr webcam stderr]', s.slice(0, 800))
+  })
+  webcamProc.on('exit', (code, signal) => {
+    if (code && code !== 0) {
+      console.error('[trackifyr] webcam_cognitive_load exited', code, signal, 'cwd=', root)
+    }
+    webcamProc = null
+    lastWebcam = null
+    tryFuse()
+    broadcastUpdate()
+  })
   wireStdoutJson(webcamProc, (j) => {
     lastWebcam = j
     tryFuse()
@@ -381,8 +394,16 @@ function startHttpServer() {
     }
     json(res, 404, { ok: false, error: 'not_found' })
   })
+  httpServer.on('error', (err) => {
+    console.error(
+      '[trackifyr] bridge HTTP server error (port',
+      DEFAULT_BRIDGE_PORT,
+      '):',
+      err && err.message,
+    )
+  })
   httpServer.listen(DEFAULT_BRIDGE_PORT, '127.0.0.1', () => {
-    /* ready */
+    console.log('[trackifyr] desktop bridge listening on http://127.0.0.1:' + DEFAULT_BRIDGE_PORT)
   })
 }
 

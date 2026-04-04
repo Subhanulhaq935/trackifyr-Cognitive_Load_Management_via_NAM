@@ -37,7 +37,8 @@
         "filter": [
           "activity_tracker.py",
           "webcam_cognitive_load.py",
-          "ml/**/*"
+          "ml/**/*",
+          "artifacts/daisee/**/*"
         ]
       }
     ],

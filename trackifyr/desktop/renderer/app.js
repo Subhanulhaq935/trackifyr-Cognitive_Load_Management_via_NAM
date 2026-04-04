@@ -174,33 +174,18 @@
     if (running) rafId = requestAnimationFrame(tick)
   }
 
-  let mediaStream = null
-
+  /**
+   * Webcam ML runs in a Python subprocess (OpenCV) — do not call getUserMedia here.
+   * On Windows/macOS, only one process can open the camera; grabbing it in Chromium
+   * blocks the ML pipeline and you get no cognitive-load JSON.
+   */
   async function setCamera(on) {
     if (on) {
-      if (mediaStream) return
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user' },
-          audio: false,
-        })
-        btnCamToggle.setAttribute('aria-checked', 'true')
-        cameraStatus.textContent = 'Webcam is on and working.'
-        cameraStatus.classList.add('on')
-      } catch (e) {
-        btnCamToggle.setAttribute('aria-checked', 'false')
-        cameraStatus.textContent =
-          e.name === 'NotAllowedError'
-            ? 'Camera access denied.'
-            : 'Could not start the camera.'
-        cameraStatus.classList.remove('on')
-        mediaStream = null
-      }
+      btnCamToggle.setAttribute('aria-checked', 'true')
+      cameraStatus.textContent =
+        'Webcam ML on — analysis opens the camera (Python). Close other apps using the camera.'
+      cameraStatus.classList.add('on')
     } else {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach((t) => t.stop())
-        mediaStream = null
-      }
       btnCamToggle.setAttribute('aria-checked', 'false')
       cameraStatus.textContent = ''
       cameraStatus.classList.remove('on')
