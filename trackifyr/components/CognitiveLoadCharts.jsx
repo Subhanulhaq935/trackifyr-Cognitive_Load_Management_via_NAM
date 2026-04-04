@@ -70,7 +70,8 @@ export default function CognitiveLoadCharts({
           <div>
             <h2 className="text-xl font-bold text-gray-900">Cognitive load (today)</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Activity load (%) and engagement (Low → High) from stored 5-minute buckets for the current PKT day
+              Activity load (%) and webcam-based engagement (Low → High) where ML samples exist — stored 5-minute buckets,
+              current PKT day
             </p>
           </div>
         </div>
@@ -114,7 +115,10 @@ export default function CognitiveLoadCharts({
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
                 formatter={(value, name) => {
-                  if (name === 'Engagement') return [tierIndexToLabel(value), 'Engagement']
+                  if (name === 'Engagement') {
+                    if (value == null || Number.isNaN(Number(value))) return ['—', 'Engagement']
+                    return [tierIndexToLabel(value), 'Engagement']
+                  }
                   return [value, name]
                 }}
               />
@@ -133,6 +137,7 @@ export default function CognitiveLoadCharts({
                 yAxisId="right"
                 type="stepAfter"
                 dataKey="engagementTier"
+                connectNulls={false}
                 stroke="#10b981"
                 strokeWidth={2.5}
                 fill="url(#colorEngagement)"

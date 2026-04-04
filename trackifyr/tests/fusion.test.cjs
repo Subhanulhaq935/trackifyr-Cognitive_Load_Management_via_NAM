@@ -30,7 +30,7 @@ test('no face => engagement low', () => {
   assert.deepStrictEqual(o.engagement_proba_pct, [100, 0, 0])
 })
 
-test('webcam ML off (user disabled): zeros and status off', () => {
+test('webcam ML off: engagement unset (not from activity)', () => {
   const o = fuseTracking({
     activity_percentage: 80,
     final_model_load: 'Medium',
@@ -40,12 +40,13 @@ test('webcam ML off (user disabled): zeros and status off', () => {
     synthetic_webcam: true,
     webcam_ml_waiting: false,
   })
-  assert.strictEqual(o.engagement_score, 0)
+  assert.strictEqual(o.engagement, null)
+  assert.strictEqual(o.engagement_score, null)
   assert.deepStrictEqual(o.engagement_proba_pct, [0, 0, 0])
   assert.strictEqual(o.webcam_ml_status, 'off')
 })
 
-test('webcam on but JSON not yet: activity fallback, status waiting', () => {
+test('webcam on but JSON not yet: engagement unset (not from activity)', () => {
   const o = fuseTracking({
     activity_percentage: 80,
     final_model_load: 'Medium',
@@ -55,14 +56,15 @@ test('webcam on but JSON not yet: activity fallback, status waiting', () => {
     synthetic_webcam: true,
     webcam_ml_waiting: true,
   })
-  assert.strictEqual(o.engagement_score, 82)
+  assert.strictEqual(o.engagement, null)
+  assert.strictEqual(o.engagement_score, null)
+  assert.deepStrictEqual(o.engagement_proba_pct, [0, 0, 0])
   assert.strictEqual(o.webcam_ml_status, 'waiting')
-  assert.deepStrictEqual(o.engagement_proba_pct, [0, 0, 100])
 })
 
-test('waiting mode: engagement uses model blend, not raw activity %', () => {
-  const o = fuseTracking({
-    activity_percentage: 44,
+test('waiting mode: activity does not set engagement', () => {
+  const low = fuseTracking({
+    activity_percentage: 5,
     final_model_load: 'Medium',
     blinks: 0,
     gaze_away: 0,
@@ -70,9 +72,17 @@ test('waiting mode: engagement uses model blend, not raw activity %', () => {
     synthetic_webcam: true,
     webcam_ml_waiting: true,
   })
-  assert.strictEqual(o.activity_load, 44)
-  assert.strictEqual(o.engagement_score, 55)
-  assert.notStrictEqual(o.engagement_score, o.activity_load)
+  const high = fuseTracking({
+    activity_percentage: 95,
+    final_model_load: 'Medium',
+    blinks: 0,
+    gaze_away: 0,
+    face_detected: true,
+    synthetic_webcam: true,
+    webcam_ml_waiting: true,
+  })
+  assert.strictEqual(low.engagement, null)
+  assert.strictEqual(high.engagement, null)
 })
 
 test('ensemble cognitive_proba => active', () => {

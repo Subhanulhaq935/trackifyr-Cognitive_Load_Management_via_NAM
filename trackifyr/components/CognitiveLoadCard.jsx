@@ -106,7 +106,7 @@ export default function CognitiveLoadCard({
       <div className="flex items-center justify-between mb-5">
         <div>
           <h3 className="text-xl font-bold text-gray-900">Current Cognitive Load</h3>
-          <p className="text-sm text-gray-500 mt-0.5">Real-time monitoring</p>
+          <p className="text-sm text-gray-500 mt-0.5">Latest reading from the desktop app (not a day average)</p>
         </div>
         <span className={`px-4 py-2 rounded-xl text-sm font-semibold border ${config.badge}`}>
           {level ?? '—'}

@@ -6,8 +6,8 @@ import {
 } from '@/lib/trackingLiveDb'
 import { getTodayAverageActivityPercent } from '@/lib/trackingSessionsDb'
 
-/** No recent ingest from the desktop app — treat as no live session */
-const STALE_MS = 22000
+/** No recent ingest from the desktop app — treat as no live session (~3× dashboard poll) */
+const STALE_MS = 35000
 
 /** Payload when no data */
 const NO_DATA = {

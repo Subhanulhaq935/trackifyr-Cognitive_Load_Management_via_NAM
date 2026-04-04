@@ -27,21 +27,24 @@ export async function ensureTrackingBucketsTable() {
       cognitive_medium INTEGER NOT NULL DEFAULT 0,
       cognitive_low INTEGER NOT NULL DEFAULT 0,
       sample_count INTEGER NOT NULL DEFAULT 0,
+      engagement_sample_count INTEGER NOT NULL DEFAULT 0,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       PRIMARY KEY (user_id, bucket_start)
     );
   `)
   await query(`
+    ALTER TABLE tracking_five_minute_buckets
+      ADD COLUMN IF NOT EXISTS engagement_sample_count INTEGER NOT NULL DEFAULT 0;
+  `)
+  await query(`
+    UPDATE tracking_five_minute_buckets
+    SET engagement_sample_count = sample_count
+    WHERE engagement_sample_count = 0 AND sample_count > 0;
+  `)
+  await query(`
     CREATE INDEX IF NOT EXISTS idx_tracking_buckets_user_time
       ON tracking_five_minute_buckets (user_id, bucket_start DESC);
   `)
-}
-
-function engagementLabelToScore(label) {
-  const s = String(label || '')
-  if (s === 'High') return 85
-  if (s === 'Low') return 30
-  return 55
 }
 
 /**
@@ -54,10 +57,11 @@ export async function mergeIngestIntoFiveMinuteBucket(userId, body) {
   const bucketStart = new Date(fiveMinuteBucketStartUtcMs())
 
   const act = typeof body.activity_load === 'number' ? body.activity_load : 0
-  const engScore =
+  /** Webcam-only: only count samples that include a numeric engagement_score from ML fusion. */
+  const hasEngagementSample =
     typeof body.engagement_score === 'number' && !Number.isNaN(body.engagement_score)
-      ? body.engagement_score
-      : engagementLabelToScore(body.engagement)
+  const engScore = hasEngagementSample ? body.engagement_score : 0
+  const engCountDelta = hasEngagementSample ? 1 : 0
 
   const cog = String(body.final_cognitive_load || 'Medium')
   let ch = 0
@@ -71,8 +75,8 @@ export async function mergeIngestIntoFiveMinuteBucket(userId, body) {
     `
     INSERT INTO tracking_five_minute_buckets (
       user_id, bucket_start, sum_activity, sum_engagement_score,
-      cognitive_high, cognitive_medium, cognitive_low, sample_count
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1)
+      cognitive_high, cognitive_medium, cognitive_low, sample_count, engagement_sample_count
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8)
     ON CONFLICT (user_id, bucket_start) DO UPDATE SET
       sum_activity = tracking_five_minute_buckets.sum_activity + EXCLUDED.sum_activity,
       sum_engagement_score = tracking_five_minute_buckets.sum_engagement_score + EXCLUDED.sum_engagement_score,
@@ -80,9 +84,10 @@ export async function mergeIngestIntoFiveMinuteBucket(userId, body) {
       cognitive_medium = tracking_five_minute_buckets.cognitive_medium + EXCLUDED.cognitive_medium,
       cognitive_low = tracking_five_minute_buckets.cognitive_low + EXCLUDED.cognitive_low,
       sample_count = tracking_five_minute_buckets.sample_count + 1,
+      engagement_sample_count = tracking_five_minute_buckets.engagement_sample_count + EXCLUDED.engagement_sample_count,
       updated_at = now()
   `,
-    [userId, bucketStart, act, engScore, ch, cm, cl],
+    [userId, bucketStart, act, engScore, ch, cm, cl, engCountDelta],
   )
 }
 
@@ -160,7 +165,8 @@ export async function listTodayBucketsForChart(userId) {
       bucket_start,
       sum_activity,
       sum_engagement_score,
-      sample_count
+      sample_count,
+      engagement_sample_count
     FROM tracking_five_minute_buckets
     WHERE user_id = $1
       AND bucket_start >= $2::timestamptz
@@ -172,10 +178,11 @@ export async function listTodayBucketsForChart(userId) {
 
   return r.rows.map((row) => {
     const n = Math.max(1, Number(row.sample_count) || 1)
+    const nEng = Math.max(0, Number(row.engagement_sample_count) || 0)
     const avgAct = Number(row.sum_activity) / n
-    const avgEng = Number(row.sum_engagement_score) / n
-    const engLabel = engagementFromAvgScore(avgEng)
-    const tierIdx = fusionEngagementToTierIndex(engLabel) ?? 2
+    const avgEng = nEng > 0 ? Number(row.sum_engagement_score) / nEng : null
+    const engLabel = avgEng != null ? engagementFromAvgScore(avgEng) : null
+    const tierIdx = engLabel != null ? fusionEngagementToTierIndex(engLabel) ?? 2 : null
     const start = new Date(row.bucket_start)
     return {
       time: formatPktChartAxisTime(start),
@@ -204,7 +211,8 @@ export async function listFiveMinuteSessionsForUser(userId, limit = SESSION_LOG_
       cognitive_high,
       cognitive_medium,
       cognitive_low,
-      sample_count
+      sample_count,
+      engagement_sample_count
     FROM tracking_five_minute_buckets
     WHERE user_id = $1
     ORDER BY bucket_start DESC
@@ -217,15 +225,16 @@ export async function listFiveMinuteSessionsForUser(userId, limit = SESSION_LOG_
     const start = new Date(row.bucket_start)
     const end = new Date(start.getTime() + 5 * 60 * 1000)
     const n = Math.max(1, Number(row.sample_count) || 1)
+    const nEng = Math.max(0, Number(row.engagement_sample_count) || 0)
     const avgAct = Number(row.sum_activity) / n
-    const avgEng = Number(row.sum_engagement_score) / n
-    const engLabel = engagementFromAvgScore(avgEng)
+    const avgEng = nEng > 0 ? Number(row.sum_engagement_score) / nEng : null
+    const engLabel = avgEng != null ? engagementFromAvgScore(avgEng) : null
     return {
       id: String(row.bucket_start),
       bucketStart: start.toISOString(),
       time: formatPktSessionWindow(start, end),
       cognitiveLoad: dominantCognitive(row),
-      engagement: fusionEngagementToTier(engLabel) || engLabel,
+      engagement: engLabel != null ? fusionEngagementToTier(engLabel) || engLabel : '—',
       duration: '5 min',
       avgActivity: `${Math.round(avgAct)}%`,
     }
@@ -251,7 +260,8 @@ export async function listPktDayBucketsAscendingForReport(userId) {
       cognitive_high,
       cognitive_medium,
       cognitive_low,
-      sample_count
+      sample_count,
+      engagement_sample_count
     FROM tracking_five_minute_buckets
     WHERE user_id = $1
       AND bucket_start >= $2::timestamptz
@@ -265,15 +275,16 @@ export async function listPktDayBucketsAscendingForReport(userId) {
     const start = new Date(row.bucket_start)
     const end = new Date(start.getTime() + 5 * 60 * 1000)
     const n = Math.max(1, Number(row.sample_count) || 1)
+    const nEng = Math.max(0, Number(row.engagement_sample_count) || 0)
     const avgAct = Number(row.sum_activity) / n
-    const avgEng = Number(row.sum_engagement_score) / n
-    const engLabel = engagementFromAvgScore(avgEng)
+    const avgEng = nEng > 0 ? Number(row.sum_engagement_score) / nEng : null
+    const engLabel = avgEng != null ? engagementFromAvgScore(avgEng) : null
     return {
       id: String(row.bucket_start),
       bucketStart: start.toISOString(),
       time: formatPktSessionWindow(start, end),
       cognitiveLoad: dominantCognitive(row),
-      engagement: fusionEngagementToTier(engLabel) || engLabel,
+      engagement: engLabel != null ? fusionEngagementToTier(engLabel) || engLabel : '—',
       duration: '5 min',
       avgActivity: `${Math.round(avgAct)}%`,
     }
@@ -300,6 +311,7 @@ export async function listRollingDailyAggregatesForUser(userId, days = WEEKLY_RO
       SUM(sample_count)::bigint AS total_samples,
       SUM(sum_activity)::double precision AS sum_act,
       SUM(sum_engagement_score)::double precision AS sum_eng,
+      SUM(engagement_sample_count)::bigint AS total_eng_samples,
       COUNT(*)::int AS bucket_count
     FROM tracking_five_minute_buckets
     WHERE user_id = $1
@@ -324,10 +336,11 @@ export async function listRollingDailyAggregatesForUser(userId, days = WEEKLY_RO
     const samples = Number(row.total_samples) || 0
     const sumAct = Number(row.sum_act) || 0
     const sumEng = Number(row.sum_eng) || 0
+    const engSamples = Number(row.total_eng_samples) || 0
     const buckets = Number(row.bucket_count) || 0
     byDay.set(key, {
       avgActivity: samples > 0 ? Math.round(sumAct / samples) : 0,
-      avgEngagement: samples > 0 ? Math.round(sumEng / samples) : 0,
+      avgEngagement: engSamples > 0 ? Math.round(sumEng / engSamples) : 0,
       sessions: buckets,
     })
   }

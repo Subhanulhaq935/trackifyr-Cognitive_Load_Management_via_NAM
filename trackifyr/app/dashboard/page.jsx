@@ -21,6 +21,8 @@ import { postTrackingFilterToBridge } from '@/lib/trackingBridgeClient'
 import { SESSION_LOG_PAGE_SIZE } from '@/lib/trackingConstants'
 
 const DESKTOP_LINK = '/download?from=dashboard'
+/** Dashboard data refresh (live metrics, charts, session list poll). */
+const DASH_POLL_MS = 11000
 
 const STATS_CARD_COLORS = {
   indigo: 'bg-indigo-100 text-indigo-600',
@@ -122,9 +124,9 @@ export default function DashboardPage() {
     fetchLive()
     void fetchDayChart()
     void fetchWeekly()
-    const idLive = setInterval(fetchLive, 2500)
-    const idChart = setInterval(fetchDayChart, 20000)
-    const idWeekly = setInterval(fetchWeekly, 45000)
+    const idLive = setInterval(fetchLive, DASH_POLL_MS)
+    const idChart = setInterval(fetchDayChart, DASH_POLL_MS)
+    const idWeekly = setInterval(fetchWeekly, DASH_POLL_MS * 4)
     return () => {
       clearInterval(idLive)
       clearInterval(idChart)
@@ -141,7 +143,7 @@ export default function DashboardPage() {
     if (!isAuthenticated) return
     const idSessions = setInterval(() => {
       void fetchSessionsData(sessionPageRef.current)
-    }, 20000)
+    }, DASH_POLL_MS)
     return () => clearInterval(idSessions)
   }, [isAuthenticated, fetchSessionsData])
 
@@ -174,7 +176,7 @@ export default function DashboardPage() {
     {
       title: 'Activity load',
       value: hasData && typeof live.activity_load === 'number' ? `${Math.round(live.activity_load)}%` : '—',
-      change: hasData ? 'Live' : '—',
+      change: hasData ? '~11s refresh' : '—',
       color: 'indigo',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -185,7 +187,7 @@ export default function DashboardPage() {
     {
       title: 'Engagement',
       value: engagementTier ?? '—',
-      change: hasData ? 'Low / Medium / High' : '—',
+      change: hasData ? 'Webcam ML only' : '—',
       color: 'green',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,7 +198,7 @@ export default function DashboardPage() {
     {
       title: 'Final cognitive load',
       value: hasData && live.final_cognitive_load ? String(live.final_cognitive_load) : '—',
-      change: hasData ? 'Fused estimate' : '—',
+      change: hasData ? 'Current (latest ingest)' : '—',
       color: 'blue',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -66,7 +66,7 @@ export default function ReportsPage() {
   useEffect(() => {
     if (!isAuthenticated) return
     void loadData()
-    const id = setInterval(loadData, 60000)
+    const id = setInterval(loadData, 11000)
     return () => clearInterval(id)
   }, [isAuthenticated, loadData])
 

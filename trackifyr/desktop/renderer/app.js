@@ -315,7 +315,7 @@
       }
       const parts = [
         `Load ${Number(fused.activity_load || 0).toFixed(1)}%`,
-        `Engagement ${fused.engagement}`,
+        `Engagement ${fused.engagement != null ? fused.engagement : '—'}`,
         `Cognitive ${fused.final_cognitive_load}`,
       ]
       trackingStatus.textContent = parts.join(' · ')

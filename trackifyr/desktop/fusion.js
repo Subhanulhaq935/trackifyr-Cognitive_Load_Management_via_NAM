@@ -4,18 +4,6 @@
 const GAZE_AWAY_ENGAGEMENT_LOW = 12
 
 /**
- * When webcam ML output is not ready yet, derive a coarse engagement label from activity (keyboard/mouse).
- * @param {number} activity_load 0–100
- * @returns {'Low' | 'Medium' | 'High'}
- */
-function engagementFromActivityLoad(activity_load) {
-  const a = Number(activity_load) || 0
-  if (a < 18) return 'Low'
-  if (a < 52) return 'Medium'
-  return 'High'
-}
-
-/**
  * @param {unknown} p [pLow, pMedium, pHigh] from mean softmax (v1+v2+v3)
  * @returns {[number, number, number] | null}
  */
@@ -85,7 +73,7 @@ function priorTripleFromFinalLoadForEngagement(final_model_load) {
 /**
  * @param {object} input
  * @param {boolean} [input.synthetic_webcam] placeholder fusion without live model line (activity-only, or waiting)
- * @param {boolean} [input.webcam_ml_waiting] webcam enabled in app but JSON/proba not ready yet — use activity fallback, not zeros
+ * @param {boolean} [input.webcam_ml_waiting] webcam enabled but ML JSON/proba not ready — engagement stays unset (not derived from activity)
  * @param {number[]} [input.cognitive_proba]
  */
 function fuseTracking(input) {
@@ -123,19 +111,10 @@ function fuseTracking(input) {
   let webcam_ml_status = 'active'
 
   if (synthetic_webcam) {
-    if (webcam_ml_waiting) {
-      webcam_ml_status = 'waiting'
-      const eng = engagementFromActivityLoad(activity_load)
-      engagement = eng
-      // Same 28/55/82 blend as the model path — do not mirror activity_load (that made engagement == activity %).
-      engagement_score = engagementScoreFromModelProba(probaTripleFromLabelPctBars(eng), true, 0)
-      engagement_proba_pct = labelToProbaPct(eng)
-    } else {
-      webcam_ml_status = 'off'
-      engagement = 'Low'
-      engagement_score = 0
-      engagement_proba_pct = [0, 0, 0]
-    }
+    webcam_ml_status = webcam_ml_waiting ? 'waiting' : 'off'
+    engagement = null
+    engagement_score = null
+    engagement_proba_pct = [0, 0, 0]
   } else if (modelProba) {
     webcam_ml_status = 'active'
     engagement_score = engagementScoreFromModelProba(input.cognitive_proba, face_detected, gaze_away)
@@ -188,5 +167,4 @@ module.exports = {
   GAZE_AWAY_ENGAGEMENT_LOW,
   normalizeProba,
   engagementScoreFromModelProba,
-  engagementFromActivityLoad,
 }
