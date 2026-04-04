@@ -1,7 +1,7 @@
 /**
  * API origin: TRACKIFYR_API_BASE env and/or release-config.json { "apiBase": "https://..." } next to main.js.
  */
-const { app, BrowserWindow, ipcMain, session } = require('electron')
+const { app, BrowserWindow, ipcMain, session, Menu } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
@@ -77,10 +77,63 @@ function createWindow() {
 
   win.once('ready-to-show', () => win.show())
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'))
+
+  win.webContents.on('context-menu', (_event, params) => {
+    const menu = Menu.buildFromTemplate([
+      { role: 'undo' },
+      { role: 'redo' },
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+      { role: 'selectAll' },
+      { type: 'separator' },
+      {
+        label: 'Inspect element',
+        click: () => win.webContents.inspectElement(params.x, params.y),
+      },
+      {
+        label: 'Open Developer Tools',
+        click: () => {
+          if (!win.webContents.isDevToolsOpened()) win.webContents.openDevTools({ mode: 'detach' })
+        },
+      },
+    ])
+    menu.popup({ window: win })
+  })
+
   mainWindow = win
   win.on('closed', () => {
     mainWindow = null
   })
+}
+
+function installAppMenu() {
+  const isMac = process.platform === 'darwin'
+  const toggleDevTools = (focusedWindow) => {
+    const w = focusedWindow || mainWindow
+    if (!w || w.isDestroyed()) return
+    w.webContents.toggleDevTools()
+  }
+  const template = [
+    ...(isMac
+      ? [{ label: app.name, submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'quit' }] }]
+      : []),
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { type: 'separator' },
+        { role: 'toggleDevTools' },
+        {
+          label: 'Toggle Developer Tools (F12)',
+          accelerator: 'F12',
+          click: (_item, fw) => toggleDevTools(fw),
+        },
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
 app.whenReady().then(() => {
@@ -150,6 +203,7 @@ app.whenReady().then(() => {
   registerIpc(ipcMain)
   startHttpServer()
 
+  installAppMenu()
   createWindow()
 
   app.on('activate', () => {
