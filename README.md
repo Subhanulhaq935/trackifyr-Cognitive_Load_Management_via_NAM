@@ -1,14 +1,12 @@
 # trackifyr: AI-Based Cognitive Load Estimation via Natural Activity Monitoring
 
-**Final Year Project (FYP) – Phase I**
+**Final Year Project (FYP)** — integrated system (web dashboard, desktop client, and ML pipeline). The codebase is **near release-complete**: end-to-end session capture, optional webcam-based cognitive load (v1 / v2 / v3 models with ensemble voting), dashboard analytics, and a **packaged Windows desktop build** (see [Releases](https://github.com/Subhanulhaq935/trackifyr-Cognitive_Load_Management_via_NAM/releases); app version **1.0.3** in `trackifyr/desktop`).
 
-trackifyr is an intelligent AI system designed to estimate cognitive load in real-time by analyzing natural user activities during digital work and study sessions. Unlike traditional digital wellbeing tools that only measure screen time, trackifyr uses multimodal behavioral signals (facial expressions, gaze patterns, keyboard, and mouse interactions) to classify cognitive load into three categories: **Low**, **Medium**, and **High**.
-
-This repository contains the complete Phase-I development work, including requirement analysis, activity tracking implementation, web dashboard prototype, and initial system architecture.
+trackifyr estimates cognitive load in real time by combining natural digital behaviors—mouse and keyboard activity, and (optionally) facial / gaze-related cues from the webcam—with models trained on **DAiSEE** and related pipelines. Outputs are **Low**, **Medium**, and **High** cognitive load, surfaced in the desktop client and on the web dashboard with sessions, charts, and reports.
 
 ---
 
-## 👥 Team Members
+## Team Members
 
 | Name | Registration # | Email | Contact |
 |------|----------------|-------|---------|
@@ -18,7 +16,7 @@ This repository contains the complete Phase-I development work, including requir
 
 ---
 
-## 📋 Project Overview
+## Project Overview
 
 | Field | Description |
 |-------|-------------|
@@ -32,213 +30,209 @@ This repository contains the complete Phase-I development work, including requir
 
 ---
 
-## 🎯 Project Goal
+## Project Goal
 
-To design and develop an AI-based system that estimates cognitive load (Low, Medium, High) in real-time by analyzing multimodal signals:
-- **Facial expressions** (frowning, yawning, raised eyebrows)
-- **Eye gaze tracking** and blink rate
-- **Keyboard typing patterns** (speed, pauses, error corrections)
-- **Mouse interaction behaviors** (movement patterns, hesitation)
+Design and develop an AI-based system that estimates cognitive load (Low, Medium, High) in real time using multimodal signals:
 
----
-
-## 🧠 System Overview (Phase-I)
-
-### Core Components Implemented:
-
-✅ **Activity Tracker (Desktop Logger)**
-- Real-time mouse and keyboard activity monitoring
-- 10-second interval summaries with activity percentage
-- Cross-platform compatibility (Windows, Linux, macOS)
-
-✅ **Web Dashboard Prototype**
-- React.js/Next.js based frontend
-- User authentication and profile management
-- Cognitive load visualization and charts
-- Session logs and reports
-
-✅ **Initial System Architecture**
-- FastAPI backend (planned)
-- PostgreSQL database design
-- Real-time data processing pipeline
-
-### Planned Components (Phase-II):
-
-🔄 **Facial Feature Extraction**
-- MediaPipe/OpenCV integration for facial cues
-- Gaze tracking and blink rate detection
-- Micro-expression recognition
-
-🔄 **Machine Learning Models**
-- Baseline models (Random Forest, SVM)
-- Deep learning models (CNN + LSTM)
-- Multimodal feature fusion
-
-🔄 **Feedback Mechanism**
-- Real-time alerts ("Take a break" notifications)
-- Teacher dashboard for class engagement monitoring
+- **Facial / head cues** (MediaPipe-based features; temporal deep model v3)
+- **Eye gaze–related behavior** and activity proxies from video frames
+- **Keyboard typing patterns** (speed, pauses, activity summaries)
+- **Mouse interaction** (movement, clicks, interval-based activity)
 
 ---
 
-## 🛠️ Technology Stack
+## System Overview (Current)
 
-### Programming Languages & Frameworks
-- **Python** - ML model development, activity tracking, backend
-- **JavaScript (React.js/Next.js)** - Web dashboard frontend
-- **Electron.js** - Desktop application (planned)
+### Implemented
 
-### Machine Learning & AI Libraries
-- **TensorFlow / PyTorch** - Deep learning models (CNN, LSTM)
-- **scikit-learn** - Classical ML algorithms (Random Forest, SVM)
-- **MediaPipe / OpenCV** - Facial feature detection, gaze tracking
-- **DeepFace** - Emotion and micro-expression recognition
+**Desktop application (Electron)**  
+- Windows installer via `electron-builder` (NSIS); Python tracking and models bundled as app resources where configured  
+- Session-oriented UX: keyboard/mouse logging and optional webcam pipeline  
+- Live fusion path aligned with training feature versions (v1 / v2 / v3) and **ensemble** decision logic  
 
-### Data Handling & Storage
-- **PostgreSQL** - Logs and processed data storage
-- **Pandas & NumPy** - Dataset management and feature engineering
+**Web application (Next.js)**  
+- Next.js **16** with React **19**, Tailwind **4**  
+- Auth (sign up / sign in / profile), dashboard, reports, tracking setup  
+- **Download** page: latest GitHub Release EXE or bundled `public/releases/` assets  
+- **API routes** for tracking ingest, sessions, charts, weekly summaries, PDF-oriented reporting (`pg`, `jspdf`)  
+- **PostgreSQL** persistence via `DATABASE_URL` (see `trackifyr/.env.example`)  
 
-### Development Tools
-- **Git & GitHub** - Version control and collaboration
-- **Jupyter Notebook** - Experimentation and model evaluation
-- **Docker** - Containerization (planned)
+**Machine learning and signal processing**  
+- **DAiSEE**-oriented training and evaluation (`train_daisee.py`, `eval_daisee_test.py`, artifacts under `artifacts/daisee/`)  
+- **v1** classical / frame-stat features; **v2** MediaPipe FaceMesh rolling features; **v3** **MobileNetV3-Small + GRU** temporal head in PyTorch  
+- **Ensemble** majority vote with tie-break priority (v3 > v2 > v1)  
+- **Live demo**: `webcam_cognitive_load.py` (used from desktop and for local experiments)  
 
-### Visualization
-- **React Charts / Recharts** - Real-time engagement visualizations
-- **Matplotlib / Seaborn** - Feature trend analysis
+**Quality and tooling**  
+- Python `unittest` for tracker and webcam/ensemble paths; Node tests for fusion bridge  
+- Scripts for desktop release packaging and optional tracking venv setup (`scripts/`)
 
----
+### Remaining / stretch (polish and evaluation)
 
-## 📊 Key Resources
-
-| Resource | Value |
-|----------|-------|
-| **Primary Datasets** | DAISEE (Dataset for Affective States in E-Environments), CLT (Cognitive Load Theory datasets), CLARE |
-| **Project Management** | JIRA (planned) |
-| **Version Control** | GitHub Repository |
-| **Documentation** | FYP Proposal, Literature Review, Phase-I Report |
+- Broader user studies and formal evaluation write-up  
+- Optional: teacher / cohort dashboards, advanced break-notification policies  
+- GPU-specific deployment notes for training (CUDA) vs CPU-only inference  
 
 ---
 
-## 📁 Repository Structure
+## Technology Stack
+
+| Layer | Technologies |
+|-------|----------------|
+| Web | Next.js 16, React 19, Tailwind 4, Recharts |
+| Desktop | Electron 34, electron-builder, bundled Python tracking |
+| Backend (app) | Next.js Route Handlers, `pg`, bcryptjs |
+| ML / CV | Python 3.10+, PyTorch, torchvision, scikit-learn, OpenCV, MediaPipe, NumPy, Pandas, joblib |
+| Input | pynput, pyautogui (activity); webcam via OpenCV |
+| Data | PostgreSQL |
+| Dev | Git / GitHub, ESLint 9, unit tests (Python + Node) |
+
+---
+
+## Key Resources
+
+| Resource | Notes |
+|----------|--------|
+| **Datasets** | DAiSEE (primary for training pipeline); literature references include CLT / CLARE where applicable |
+| **Version control** | GitHub repository |
+| **Documentation** | FYP proposal, literature review, and phase reports (may live outside this repo) |
+
+---
+
+## Repository Structure
 
 ```
 trackifyr-Cognitive_Load_Management_via_NAM/
-├── trackifyr-py/              # Python backend and activity tracker
-│   ├── activity_tracker.py    # Mouse/keyboard activity monitoring
-│   ├── requirements.txt       # Python dependencies
-│   └── README.md              # Activity tracker documentation
-├── trackifyr-web/             # Web dashboard frontend
-│   ├── app/                   # Next.js app routes
-│   ├── components/            # React components
-│   ├── context/               # React context providers
-│   └── package.json           # Node.js dependencies
-├── AI-Based Cognitive Load Estimation via NAM FYP Proposal.pdf
-├── Literature Review.pdf
-├── FYP-I-Report.pdf
-└── README.md                  # This file
+├── trackifyr/                    # Main application (web + shared Python + desktop subproject)
+│   ├── app/                      # Next.js App Router (pages, API routes)
+│   ├── components/               # React UI components
+│   ├── context/                  # React context (e.g. auth)
+│   ├── lib/                      # DB pool, shared server utilities
+│   ├── desktop/                  # Electron app (trackifyr-desktop, release 1.0.3)
+│   ├── ml/                       # Features, models, DAiSEE helpers, ensemble
+│   ├── scripts/                  # Desktop packaging, env setup helpers
+│   ├── tests/                    # Python (+ Node) tests
+│   ├── artifacts/daisee/         # Trained artifacts (paths expected by train/infer scripts)
+│   ├── activity_tracker.py       # Mouse / keyboard interval summaries
+│   ├── webcam_cognitive_load.py  # Live webcam cognitive load (v1/v2/v3)
+│   ├── train_daisee.py           # Training entry points
+│   ├── requirements.txt          # Python dependencies
+│   └── package.json              # Web scripts; `npm run desktop` / `release:desktop`
+├── README.md
+└── …
 ```
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-- Python 3.8+
-- Node.js 16+
-- PostgreSQL (for production)
 
-### Activity Tracker Setup
+- **Node.js** 18+ (recommended for Next.js 16)  
+- **Python** 3.10+ for tracking and ML (see `trackifyr/requirements.txt`)  
+- **PostgreSQL** for full web auth and tracking persistence  
 
-```bash
-cd trackifyr-py
-pip install -r requirements.txt
-python activity_tracker.py
-```
-
-### Web Dashboard Setup
+### Web dashboard
 
 ```bash
-cd trackifyr-web
+cd trackifyr
+cp .env.example .env          # edit DATABASE_URL for your Postgres user/db
 npm install
 npm run dev
 ```
 
----
+Open the URL shown in the terminal (typically `http://localhost:3000`).
 
-## 📈 Phase-I Status
+### Python tracking and ML (local)
 
-### Completed ✅
-- ✅ Requirement Analysis
-- ✅ Literature Review
-- ✅ System Architecture Design
-- ✅ Activity Tracker Implementation (Mouse/Keyboard)
-- ✅ Web Dashboard Prototype (React/Next.js)
-- ✅ Initial Database Schema Design
-- ✅ Project Documentation
+```bash
+cd trackifyr
+py -3 -m pip install -r requirements.txt
+# optional: scripts/setup_tracking_env.bat (Windows) or scripts/setup_tracking_env.sh
+python activity_tracker.py
+python webcam_cognitive_load.py --version v3 --device cuda   # requires trained artifacts
+```
 
-### In Progress 🔄
-- 🔄 Facial Feature Extraction Pipeline
-- 🔄 Baseline Model Training (Random Forest/SVM)
-- 🔄 Feature Engineering and Preprocessing
+### Desktop client (development)
 
-### Planned 📋
-- 📋 Deep Learning Model Development (CNN+LSTM)
-- 📋 Multimodal Feature Fusion
-- 📋 Real-time Feedback System
-- 📋 Teacher Dashboard
-- 📋 Comprehensive Testing & Evaluation
+```bash
+cd trackifyr
+npm run desktop
+```
 
----
+### Desktop release build
 
-## 🎓 Success Criteria
+From `trackifyr`, use `npm run release:desktop` (see `scripts/package-desktop-release.mjs`) or build from `trackifyr/desktop` with `npm run dist` after installing desktop dependencies.
 
-The project will be considered successful if it can:
+### End users (Windows)
 
-1. ✅ Correctly categorize user cognitive load as **Low**, **Medium**, and **High** with satisfactory performance on benchmark datasets (DAISEE, CLT)
-2. ✅ Provide real-time monitoring using desktop application without significant delay
-3. ✅ Incorporate multiple input sources (webcam, keyboard, mouse) and generate consistent outputs
-4. ✅ Effectively display results on web-based dashboard with logs, visualizations, and feedback notifications
-5. ✅ Be accepted by supervisor as achieving defined objectives for practical applications
+Use the in-app **Download** flow or the repository **Releases** page for the latest installer (CI/stable name `trackifyr-desktop-setup.exe`, or `trackifyr-Setup-<version>.exe` from a local `desktop` build).
 
 ---
 
-## 📚 Research Contributions
+## Project Status
 
-### Research Gaps Addressed
-- Most prior studies are dataset-driven rather than building end-to-end usable systems
-- Many focus on intrusive physiological sensors (EEG, ECG)
-- Approaches often restricted to controlled lab environments
+### Done
 
-### Our Contribution
-- **Natural activity monitoring** using webcam, keyboard, and mouse during normal digital work
-- **Real-time automatic detection** using multimodal features
-- **Actionable feedback** (break reminders) instead of only data labeling
-- **Practical tools**: Desktop app for activity capture and web dashboard for visualization
+- Requirements, architecture, and core documentation trajectory  
+- Activity tracker (mouse / keyboard, interval summaries)  
+- Web dashboard: auth, profile, dashboard, reports, tracking APIs, PostgreSQL integration  
+- DAiSEE-oriented training pipeline and evaluation scripts  
+- MediaPipe-based features, classical and deep temporal model (v3), ensemble fusion  
+- Electron desktop client with bundled tracking/ML layout and versioned releases  
+- Download page wired to latest GitHub Release asset where configured  
 
----
+### In progress / final polish
 
-## 📎 Notes for Evaluators
-
-- Each contribution is traceable through commit history and branch structure
-- Code follows modular architecture with clear separation of concerns
-- All team members worked on assigned components independently
-- Project documentation includes proposal, literature review, and Phase-I report
+- Final FYP report, demos, and evaluation metrics narrative  
+- Any remaining UX and deployment hardening for evaluators  
 
 ---
 
-## 📬 Contact
+## Success Criteria (mapping)
 
-For any clarification regarding this repository or Phase-I deliverables, please contact:
-
-**Project Advisor**: Prof. Tayyaba Tariq  
-**Group Leader**: Muhammad Moin U Din (bcsf22m023@pucit.edu.pk)
+1. Categorize cognitive load as **Low / Medium / High** with trained models on DAiSEE-aligned pipelines and ensemble behavior.  
+2. **Real-time** monitoring via desktop client with acceptable latency for lab and daily use.  
+3. **Multimodal** inputs: keyboard, mouse, and optional webcam path into a single fused label for the session UI.  
+4. **Web dashboard** for logs, visualizations, and session reporting.  
+5. Meet supervisor-defined objectives for a practical NAM-based cognitive load tool.  
 
 ---
 
-## 📄 License
+## Research Contributions
+
+### Gaps addressed
+
+- Many studies are dataset-only or lab-bound; we target a **usable** stack (desktop + web).  
+- We emphasize **natural** activity monitoring rather than intrusive clinical sensors for everyday digital work.  
+
+### Contribution
+
+- **Natural activity monitoring** combining keyboard, mouse, and webcam-derived features.  
+- **Real-time detection** with versioned pipelines and explicit ensemble policy.  
+- **Actionable product shape**: installable desktop client and authenticated web analytics.  
+
+---
+
+## Notes for Evaluators
+
+- Changes are traceable via Git history and release tags.  
+- Modular layout: `app/api/*` for server behavior, `ml/*` for models/features, `desktop/*` for the Electron shell.  
+- For a full run: configure `DATABASE_URL`, install Node and Python deps, and ensure DAiSEE artifacts exist where scripts expect them under `artifacts/daisee/`.  
+
+---
+
+## Contact
+
+**Project advisor:** Prof. Tayyaba Tariq  
+**Group leader:** Muhammad Moin U Din (bcsf22m023@pucit.edu.pk)  
+
+---
+
+## License
 
 This project is developed as part of the Final Year Project (FYP) at the Department of Computer Science, FCIT, University of the Punjab.
 
 ---
 
-**✨ trackifyr — Monitoring cognitive load through natural activity analysis.**
+**trackifyr** — monitoring cognitive load through natural activity analysis.

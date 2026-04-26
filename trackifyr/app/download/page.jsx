@@ -17,6 +17,9 @@ export const metadata = {
 const DEFAULT_GITHUB_LATEST_EXE =
   process.env.NEXT_PUBLIC_DESKTOP_GITHUB_EXE?.trim() ||
   'https://github.com/Subhanulhaq935/trackifyr-Cognitive_Load_Management_via_NAM/releases/latest/download/trackifyr-desktop-setup.exe'
+const GITHUB_RELEASES_LATEST_API =
+  process.env.NEXT_PUBLIC_DESKTOP_GITHUB_RELEASES_API?.trim() ||
+  'https://api.github.com/repos/Subhanulhaq935/trackifyr-Cognitive_Load_Management_via_NAM/releases/latest'
 
 function getBundledRelease() {
   const dir = path.join(process.cwd(), 'public', 'releases')
@@ -52,11 +55,33 @@ function formatMb(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-export default function DownloadPage() {
+async function getGithubLatestExeUrl(disableGithub) {
+  if (disableGithub) return ''
+  if (process.env.NEXT_PUBLIC_DESKTOP_GITHUB_EXE?.trim()) return DEFAULT_GITHUB_LATEST_EXE
+  try {
+    const r = await fetch(GITHUB_RELEASES_LATEST_API, {
+      cache: 'no-store',
+      headers: { Accept: 'application/vnd.github+json' },
+    })
+    if (!r.ok) return DEFAULT_GITHUB_LATEST_EXE
+    const j = await r.json()
+    const assets = Array.isArray(j?.assets) ? j.assets : []
+    const exe = assets.find((a) => {
+      const n = String(a?.name || '').toLowerCase()
+      return n.endsWith('.exe') && n.startsWith('trackifyr-setup-')
+    })
+    const url = String(exe?.browser_download_url || '').trim()
+    return url || DEFAULT_GITHUB_LATEST_EXE
+  } catch {
+    return DEFAULT_GITHUB_LATEST_EXE
+  }
+}
+
+export default async function DownloadPage() {
   const envUrl = process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL?.trim() || ''
   const disableGithub = process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_DISABLE_GITHUB === '1'
   const bundled = getBundledRelease()
-  const githubExe = !envUrl && !bundled && !disableGithub ? DEFAULT_GITHUB_LATEST_EXE : ''
+  const githubExe = !envUrl && !bundled ? await getGithubLatestExeUrl(disableGithub) : ''
   const downloadUrl = envUrl || bundled?.href || githubExe
   const isZip =
     Boolean(bundled && !envUrl && bundled.kind === 'zip') ||
