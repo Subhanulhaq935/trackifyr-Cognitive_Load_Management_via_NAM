@@ -1,5 +1,12 @@
 'use client'
 
+import {
+  ACTIVITY_DAY_AVG_LABEL,
+  ACTIVITY_PERCENT_LABEL,
+  ACTIVITY_SCALE_MAX,
+  SESSION_LOGS_ACTIVITY_SUBLINE,
+} from '@/lib/activityMetrics'
+
 export async function fetchReportPayload(period) {
   const res = await fetch(`/api/tracking/report?period=${period}`, {
     cache: 'no-store',
@@ -30,7 +37,10 @@ function countCognitiveLoads(rows) {
 
 /** @param {import('jspdf').jsPDF} doc */
 function drawActivitySparkline(doc, x, y, w, h, chartPoints) {
-  const loads = (chartPoints || []).map((p) => (typeof p.load === 'number' ? p.load : 0))
+  const scale = Math.max(1, ACTIVITY_SCALE_MAX)
+  const loads = (chartPoints || []).map((p) =>
+    typeof p.load === 'number' ? Math.max(0, Math.min(scale, p.load)) : 0,
+  )
   if (loads.length < 2) return
   doc.setDrawColor(99, 102, 241)
   doc.setLineWidth(0.35)
@@ -38,8 +48,8 @@ function drawActivitySparkline(doc, x, y, w, h, chartPoints) {
   for (let i = 0; i < n - 1; i++) {
     const x1 = x + (i / (n - 1)) * w
     const x2 = x + ((i + 1) / (n - 1)) * w
-    const y1 = y + h - (loads[i] / 100) * h
-    const y2 = y + h - (loads[i + 1] / 100) * h
+    const y1 = y + h - (loads[i] / scale) * h
+    const y2 = y + h - (loads[i + 1] / scale) * h
     doc.line(x1, y1, x2, y2)
   }
   doc.setDrawColor(200, 200, 200)
@@ -133,8 +143,8 @@ export async function downloadDailyPdf(payload) {
   const summary = payload.daily?.summary
   const avgLine =
     typeof summary?.dailyAvgActivityPct === 'number' && !Number.isNaN(summary.dailyAvgActivityPct)
-      ? `Day average activity (all samples): ${summary.dailyAvgActivityPct}%`
-      : 'Day average activity: —'
+      ? `${ACTIVITY_DAY_AVG_LABEL} (all samples, 0–${ACTIVITY_SCALE_MAX}): ${summary.dailyAvgActivityPct}%`
+      : `${ACTIVITY_DAY_AVG_LABEL}: —`
   doc.text(avgLine, margin, y)
   y += 6
   doc.text(`5-minute windows in report: ${summary?.bucketCount ?? 0}`, margin, y)
@@ -149,7 +159,7 @@ export async function downloadDailyPdf(payload) {
   if (chartPts.length >= 2) {
     doc.setFontSize(9)
     doc.setTextColor(50, 50, 50)
-    doc.text('Activity % over the PKT day (line)', margin, y)
+    doc.text(`${ACTIVITY_PERCENT_LABEL} over the PKT day (5-min bucket means, 0–${ACTIVITY_SCALE_MAX})`, margin, y)
     y += 5
     drawActivitySparkline(doc, margin, y, pageW, 22, chartPts)
     y += 28
@@ -176,7 +186,7 @@ export async function downloadDailyPdf(payload) {
 
   autoTable(doc, {
     startY: y,
-    head: [['Time window (PKT)', 'Avg activity', 'Cognitive load', 'Engagement', 'Duration']],
+    head: [['Time window (PKT)', ACTIVITY_PERCENT_LABEL, 'Cognitive load', 'Engagement', 'Duration']],
     body: body.length ? body : [['No data for this PKT day', '—', '—', '—', '—']],
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [67, 56, 202], textColor: 255 },
@@ -188,9 +198,10 @@ export async function downloadDailyPdf(payload) {
   doc.setFontSize(9)
   doc.setTextColor(80, 80, 80)
   doc.text(
-    'Each row is one 5-minute window. Values are averages of samples ingested in that window only.',
+    `Each row is one 5-minute window (PKT). ${SESSION_LOGS_ACTIVITY_SUBLINE} Cognitive load and engagement are window averages only.`,
     margin,
     Math.min(finalY + 10, doc.internal.pageSize.getHeight() - 20),
+    { maxWidth: pageW },
   )
 
   addFooter(doc, doc.getNumberOfPages())
@@ -220,7 +231,12 @@ export async function downloadWeeklyPdf(payload) {
   if (rows.length) {
     doc.setFontSize(9)
     doc.setTextColor(50, 50, 50)
-    doc.text('Per PKT day: purple = avg activity %, green = 5-minute windows with data', margin, y)
+    doc.text(
+      `Per PKT day: purple = ${ACTIVITY_PERCENT_LABEL} (day mean, 0–${ACTIVITY_SCALE_MAX}), green = 5-minute windows with data`,
+      margin,
+      y,
+      { maxWidth: pageW },
+    )
     y += 5
     drawWeeklyBars(doc, margin, y, pageW, 26, rows)
     y += 34
@@ -234,7 +250,7 @@ export async function downloadWeeklyPdf(payload) {
 
   autoTable(doc, {
     startY: y,
-    head: [['Day (PKT)', 'Average activity %', '5-minute windows with data']],
+    head: [['Day (PKT)', `${ACTIVITY_PERCENT_LABEL} (day mean)`, '5-minute windows with data']],
     body: body.length ? body : [['No data in this window', '—', '0']],
     styles: { fontSize: 9, cellPadding: 2.5 },
     headStyles: { fillColor: [67, 56, 202], textColor: 255 },
@@ -246,9 +262,10 @@ export async function downloadWeeklyPdf(payload) {
   doc.setFontSize(9)
   doc.setTextColor(80, 80, 80)
   doc.text(
-    'Average activity is the mean of all ingest samples that fell on that PKT calendar day.',
+    `${ACTIVITY_PERCENT_LABEL} (day mean) is the mean of the same 0–${ACTIVITY_SCALE_MAX} per-sample Activity % as the live app, aggregated per PKT calendar day.`,
     margin,
     Math.min(finalY + 10, doc.internal.pageSize.getHeight() - 20),
+    { maxWidth: pageW },
   )
 
   addFooter(doc, doc.getNumberOfPages())

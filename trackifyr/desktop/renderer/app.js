@@ -345,7 +345,7 @@
             ? fused.engagement
             : '—'
       const parts = [
-        `Load ${Number(fused.activity_load || 0).toFixed(1)}%`,
+        `Activity % ${Number(fused.activity_load || 0).toFixed(1)}`,
         `Engagement ${engLabel}`,
         `Cognitive ${fused.final_cognitive_load}`,
       ]

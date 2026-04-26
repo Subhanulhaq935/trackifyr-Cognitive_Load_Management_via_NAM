@@ -10,6 +10,7 @@ import {
   pktRollingWindowBounds,
   pktStartOfCalendarDay,
 } from '@/lib/pktTime'
+import { ACTIVITY_SCALE_MAX } from '@/lib/activityMetrics'
 import { SESSION_LOG_PAGE_SIZE, WEEKLY_ROLLING_DAYS } from '@/lib/trackingConstants'
 
 export { fiveMinuteBucketStartUtcMs } from '@/lib/pktTime'
@@ -49,6 +50,7 @@ export async function ensureTrackingBucketsTable() {
 
 /**
  * @param {object} body ingest payload (fused)
+ * Sums `activity_load` into `sum_activity` — same 0–100 Activity % scale as live Fusion (`lib/activityMetrics.js`).
  */
 export async function mergeIngestIntoFiveMinuteBucket(userId, body) {
   if (!userId || !body || typeof body !== 'object') return
@@ -179,7 +181,7 @@ export async function getTodayAverageActivityPercent(userId) {
   const sc = Number(r.rows[0]?.sc) || 0
   const sa = Number(r.rows[0]?.sa) || 0
   if (sc <= 0) return null
-  return Math.max(0, Math.min(100, Math.round(sa / sc)))
+  return Math.max(0, Math.min(ACTIVITY_SCALE_MAX, Math.round(sa / sc)))
 }
 
 /**

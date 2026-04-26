@@ -25,6 +25,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "activityMetrics.cjs",
       "fusion.js",
       "tracking-bridge.js",
       "renderer/**/*",

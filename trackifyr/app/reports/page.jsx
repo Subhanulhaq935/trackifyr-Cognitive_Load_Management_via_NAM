@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
+import { ACTIVITY_DAY_AVG_LABEL } from '@/lib/activityMetrics'
 import Sidebar from '@/components/Sidebar'
 import Header from '@/components/Header'
 import CognitiveLoadCharts from '@/components/CognitiveLoadCharts'
@@ -138,7 +139,7 @@ export default function ReportsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-100 p-6">
-              <p className="text-sm font-medium text-gray-600 mb-2">Average activity (today, PKT)</p>
+              <p className="text-sm font-medium text-gray-600 mb-2">{ACTIVITY_DAY_AVG_LABEL} (PKT)</p>
               <p className="text-3xl font-bold text-gray-900">{dayAvg}</p>
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-100 p-6">

@@ -1,9 +1,10 @@
 /**
- * @fileoverview Cognitive load card — activity load % + engagement (Low / Medium / High).
+ * @fileoverview Cognitive load card — Activity % (same 0–100 metric as session logs) + engagement (Low / Medium / High).
  */
 
 'use client'
 
+import { ACTIVITY_PERCENT_LABEL, ACTIVITY_SCALE_MAX } from '@/lib/activityMetrics'
 import { formatPktTimeShort } from '@/lib/pktTime'
 
 const COGNITIVE_LOAD_LEVELS = {
@@ -55,7 +56,7 @@ export default function CognitiveLoadCard({
 }) {
   const config = getLevelConfig(level)
   const safeValue =
-    typeof value === 'number' && !Number.isNaN(value) ? Math.max(0, Math.min(100, value)) : null
+    typeof value === 'number' && !Number.isNaN(value) ? Math.max(0, Math.min(ACTIVITY_SCALE_MAX, value)) : null
 
   if (!hasData) {
     return (
@@ -72,7 +73,7 @@ export default function CognitiveLoadCard({
         <div className="space-y-5">
           <div>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-semibold text-gray-700">Activity load</span>
+              <span className="text-sm font-semibold text-gray-700">{ACTIVITY_PERCENT_LABEL}</span>
               <span className="text-3xl font-bold text-gray-400">—</span>
             </div>
             <div className="relative w-full bg-gray-200 rounded-full h-4 overflow-hidden">
@@ -116,7 +117,7 @@ export default function CognitiveLoadCard({
       <div className="space-y-5">
         <div>
           <div className="flex justify-between items-center mb-3">
-            <span className="text-sm font-semibold text-gray-700">Activity load</span>
+            <span className="text-sm font-semibold text-gray-700">{ACTIVITY_PERCENT_LABEL}</span>
             <span className="text-3xl font-bold text-gray-900">{safeValue != null ? `${Math.round(safeValue)}%` : '—'}</span>
           </div>
           <div className="relative w-full bg-gray-200 rounded-full h-4 overflow-hidden">

@@ -1,5 +1,6 @@
 'use client'
 
+import { ACTIVITY_PERCENT_LABEL, ACTIVITY_SCALE_MAX } from '@/lib/activityMetrics'
 import {
   Bar,
   CartesianGrid,
@@ -27,7 +28,7 @@ const TOOLTIP_STYLE = {
 function parseActivityPct(s) {
   if (s == null) return null
   const n = Number(String(s).replace(/%/g, '').trim())
-  return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : null
+  return Number.isFinite(n) ? Math.max(0, Math.min(ACTIVITY_SCALE_MAX, n)) : null
 }
 
 function shortTimeLabel(timeWindow) {
@@ -114,15 +115,24 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
 
         {hasActivityBars ? (
           <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">Activity by window</h3>
+            <h3 className="text-sm font-semibold text-gray-800 mb-3">{ACTIVITY_PERCENT_LABEL} by 5-min window</h3>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={activityBars} margin={{ top: 8, right: 8, left: 0, bottom: 64 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="slot" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 9, fill: '#6b7280' }} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} label={{ value: '%', angle: 0, position: 'insideTop', fill: '#6b7280' }} />
+                  <YAxis
+                    domain={[0, ACTIVITY_SCALE_MAX]}
+                    tick={{ fontSize: 11 }}
+                    label={{ value: ACTIVITY_PERCENT_LABEL, angle: -90, position: 'insideLeft', fill: '#6b7280' }}
+                  />
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="activity" fill="#6366f1" name="Avg activity %" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="activity"
+                    fill="#6366f1"
+                    name={`${ACTIVITY_PERCENT_LABEL} (window mean)`}
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -131,16 +141,23 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
 
         {hasTrend ? (
           <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">Activity (PKT day)</h3>
+            <h3 className="text-sm font-semibold text-gray-800 mb-3">{ACTIVITY_PERCENT_LABEL} (PKT day, 5-min means)</h3>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={activityTrend} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="t" angle={-35} textAnchor="end" height={60} tick={{ fontSize: 10, fill: '#6b7280' }} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                  <YAxis domain={[0, ACTIVITY_SCALE_MAX]} tick={{ fontSize: 11 }} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
                   <Legend />
-                  <Line type="monotone" dataKey="load" stroke="#6366f1" strokeWidth={2} dot={{ r: 2 }} name="Activity %" />
+                  <Line
+                    type="monotone"
+                    dataKey="load"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    name={`${ACTIVITY_PERCENT_LABEL} (bucket mean)`}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -155,7 +172,7 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
                 <ComposedChart data={weeklyTrend} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#6b7280' }} />
-                  <YAxis yAxisId="act" orientation="left" domain={[0, 100]} tick={{ fontSize: 11 }} />
+                  <YAxis yAxisId="act" orientation="left" domain={[0, ACTIVITY_SCALE_MAX]} tick={{ fontSize: 11 }} />
                   <YAxis yAxisId="win" orientation="right" allowDecimals={false} tick={{ fontSize: 11 }} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
                   <Legend />
@@ -167,7 +184,7 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
                     stroke="#6366f1"
                     strokeWidth={2.5}
                     dot={{ r: 4 }}
-                    name="Avg activity %"
+                    name={`${ACTIVITY_PERCENT_LABEL} (day mean)`}
                   />
                 </ComposedChart>
               </ResponsiveContainer>

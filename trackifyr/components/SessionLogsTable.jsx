@@ -4,6 +4,8 @@
 
 'use client'
 
+import { ACTIVITY_PERCENT_LABEL, SESSION_LOGS_ACTIVITY_SUBLINE } from '@/lib/activityMetrics'
+
 const LOAD_BADGE_COLORS = {
   Low: 'bg-green-100 text-green-800 border-green-200',
   Medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -56,7 +58,8 @@ export default function SessionLogsTable({
           <div>
             <h2 className="text-xl font-bold text-gray-900">Session logs</h2>
             <p className="text-sm text-gray-500 mt-1">
-              One row per 5-minute window (PKT-aligned). Values are averages of all samples ingested in that window only.
+              One row per 5-minute window (PKT-aligned). {SESSION_LOGS_ACTIVITY_SUBLINE} Cognitive load and engagement
+              use averages of samples in that window only.
             </p>
           </div>
           <div className="flex items-center space-x-2 text-sm text-gray-600">
@@ -78,7 +81,7 @@ export default function SessionLogsTable({
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Time (5 min)</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Avg activity
+                  {ACTIVITY_PERCENT_LABEL}
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Cognitive load

@@ -4,6 +4,7 @@
 
 'use client'
 
+import { ACTIVITY_PERCENT_LABEL, ACTIVITY_SCALE_MAX } from '@/lib/activityMetrics'
 import {
   Bar,
   BarChart,
@@ -70,8 +71,8 @@ export default function CognitiveLoadCharts({
           <div>
             <h2 className="text-xl font-bold text-gray-900">Cognitive load (today)</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Activity load (%) and webcam-based engagement (Low → High) where ML samples exist — stored 5-minute buckets,
-              current PKT day
+              {ACTIVITY_PERCENT_LABEL} (5-minute bucket mean, same 0–{ACTIVITY_SCALE_MAX} scale as live) and
+              webcam-based engagement (Low → High) where ML samples exist — current PKT day
             </p>
           </div>
         </div>
@@ -99,9 +100,9 @@ export default function CognitiveLoadCharts({
               <XAxis dataKey="time" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 11, fill: '#6b7280' }} />
               <YAxis
                 yAxisId="left"
-                label={{ value: 'Activity %', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
+                label={{ value: ACTIVITY_PERCENT_LABEL, angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
                 tick={{ fontSize: 11, fill: '#6b7280' }}
-                domain={[0, 100]}
+                domain={[0, ACTIVITY_SCALE_MAX]}
               />
               <YAxis
                 yAxisId="right"
@@ -130,7 +131,7 @@ export default function CognitiveLoadCharts({
                 stroke="#6366f1"
                 strokeWidth={2.5}
                 fill="url(#colorLoad)"
-                name="Activity load %"
+                name={`${ACTIVITY_PERCENT_LABEL} (5-min mean)`}
                 dot={{ r: 3, fill: '#6366f1' }}
               />
               <Area
@@ -159,8 +160,8 @@ export default function CognitiveLoadCharts({
           <div className="mb-6">
             <h2 className="text-xl font-bold text-gray-900">Weekly aggregates</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Rolling 7 PKT calendar days: average activity % and number of 5-minute windows with data — updates while
-              you ingest
+              Rolling 7 PKT calendar days: mean {ACTIVITY_PERCENT_LABEL} per day (same 0–{ACTIVITY_SCALE_MAX} samples as session logs) and
+              number of 5-minute windows with data — updates while you ingest
             </p>
           </div>
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
@@ -169,9 +170,14 @@ export default function CognitiveLoadCharts({
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#6b7280' }} />
               <YAxis
                 yAxisId="act"
-                label={{ value: 'Avg activity % (0–100)', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
+                label={{
+                  value: `${ACTIVITY_PERCENT_LABEL} (day mean, 0–${ACTIVITY_SCALE_MAX})`,
+                  angle: -90,
+                  position: 'insideLeft',
+                  style: { fill: '#6b7280' },
+                }}
                 tick={{ fontSize: 11, fill: '#6b7280' }}
-                domain={[0, 100]}
+                domain={[0, ACTIVITY_SCALE_MAX]}
               />
               <YAxis
                 yAxisId="win"
@@ -186,7 +192,7 @@ export default function CognitiveLoadCharts({
                 yAxisId="act"
                 dataKey="avgActivity"
                 fill="#6366f1"
-                name="Avg activity %"
+                name={`${ACTIVITY_PERCENT_LABEL} (day mean)`}
                 radius={[8, 8, 0, 0]}
               />
               <Bar

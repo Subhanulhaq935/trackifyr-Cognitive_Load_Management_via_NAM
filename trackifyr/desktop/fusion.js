@@ -1,9 +1,11 @@
 'use strict'
 
-/** Activity % at or above this counts as "high" for final_cognitive_load fusion. */
-const ACTIVITY_HIGH_THRESHOLD = 70
-/** Activity % below this counts as "low" for final_cognitive_load fusion (40–69% is neither). */
-const ACTIVITY_LOW_THRESHOLD = 40
+const {
+  ACTIVITY_HIGH_THRESHOLD,
+  ACTIVITY_LOW_THRESHOLD,
+  ACTIVITY_VERY_HIGH_MIN,
+  ACTIVITY_VERY_LOW_MAX,
+} = require('./activityMetrics.cjs')
 
 /** Frames with gaze_away count at or above this are treated as "high gaze" for engagement. */
 const GAZE_AWAY_ENGAGEMENT_LOW = 12
@@ -175,19 +177,24 @@ function fuseTracking(input) {
   }
 
   // Extra matrix rule: very high activity with Medium engagement should still be treated as High cognitive load.
-  if (activity_load >= 80 && engagement === 'Medium') {
+  if (activity_load >= ACTIVITY_VERY_HIGH_MIN && engagement === 'Medium') {
     final_cognitive_load = 'High'
   }
   // Extra matrix rule: very low activity with Medium engagement should be treated as Low cognitive load.
-  if (activity_load <= 15 && engagement === 'Medium') {
+  if (activity_load <= ACTIVITY_VERY_LOW_MAX && engagement === 'Medium') {
     final_cognitive_load = 'Low'
   }
   // Very low keyboard/mouse activity: treat cognitive load as Low even when facial/ML engagement reads High.
-  if (activity_load <= 15 && engagement === 'High') {
+  if (activity_load <= ACTIVITY_VERY_LOW_MAX && engagement === 'High') {
     final_cognitive_load = 'Low'
   }
-  // Medium engagement: High cognitive load only when average activity is very high (>= 80).
-  if (!synthetic_webcam && engagement === 'Medium' && final_cognitive_load === 'High' && activity_load < 80) {
+  // Medium engagement: High cognitive load only when activity % is at the “very high” band (same scale as session logs).
+  if (
+    !synthetic_webcam &&
+    engagement === 'Medium' &&
+    final_cognitive_load === 'High' &&
+    activity_load < ACTIVITY_VERY_HIGH_MIN
+  ) {
     final_cognitive_load = 'Medium'
   }
 
@@ -208,6 +215,8 @@ module.exports = {
   fuseTracking,
   ACTIVITY_HIGH_THRESHOLD,
   ACTIVITY_LOW_THRESHOLD,
+  ACTIVITY_VERY_HIGH_MIN,
+  ACTIVITY_VERY_LOW_MAX,
   GAZE_AWAY_ENGAGEMENT_LOW,
   normalizeProba,
   engagementScoreFromModelProba,

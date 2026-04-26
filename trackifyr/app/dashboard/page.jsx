@@ -11,6 +11,7 @@ import CognitiveLoadCard from '@/components/CognitiveLoadCard'
 import CognitiveLoadCharts from '@/components/CognitiveLoadCharts'
 import SessionLogsTable from '@/components/SessionLogsTable'
 import FeedbackPanel from '@/components/FeedbackPanel'
+import { ACTIVITY_DAY_AVG_LABEL, ACTIVITY_PERCENT_LABEL } from '@/lib/activityMetrics'
 import { fusionEngagementToTier } from '@/lib/engagementTier'
 import { SESSION_LOG_PAGE_SIZE } from '@/lib/trackingConstants'
 
@@ -172,7 +173,7 @@ export default function DashboardPage() {
 
   const statsCards = [
     {
-      title: 'Activity load',
+      title: ACTIVITY_PERCENT_LABEL,
       value: hasData && typeof live.activity_load === 'number' ? `${Math.round(live.activity_load)}%` : '—',
       change: '—',
       color: 'indigo',
@@ -205,7 +206,7 @@ export default function DashboardPage() {
       ),
     },
     {
-      title: 'Total activity %',
+      title: ACTIVITY_DAY_AVG_LABEL,
       value:
         typeof live?.daily_avg_activity_pct === 'number' && !Number.isNaN(live.daily_avg_activity_pct)
           ? `${Math.round(live.daily_avg_activity_pct)}%`
