@@ -238,6 +238,23 @@ test('engagement middle-ground override: one High + moderate high proba forces H
   assert.deepStrictEqual(o.engagement_proba_pct, [0, 0, 100])
 })
 
+test('Medium engagement: activity below 80 cannot stay cognitive High', () => {
+  const o = fuseTracking({
+    activity_percentage: 75,
+    final_model_load: 'High',
+    blinks: 0,
+    gaze_away: 0,
+    face_detected: true,
+    synthetic_webcam: false,
+    cognitive_proba: [0.25, 0.5, 0.25],
+    v1_prediction: 'Low',
+    v2_prediction: 'Medium',
+    v3_prediction: 'Low',
+  })
+  assert.strictEqual(o.engagement, 'Medium')
+  assert.strictEqual(o.final_cognitive_load, 'Medium')
+})
+
 test('cognitive matrix extension: activity >= 80 and engagement Medium => cognitive High', () => {
   const o = fuseTracking({
     activity_percentage: 85,
@@ -269,5 +286,22 @@ test('cognitive matrix extension: activity <= 15 and engagement Medium => cognit
     v3_prediction: 'Low',
   })
   assert.strictEqual(o.engagement, 'Medium')
+  assert.strictEqual(o.final_cognitive_load, 'Low')
+})
+
+test('cognitive matrix extension: activity <= 15 and engagement High => cognitive Low', () => {
+  const o = fuseTracking({
+    activity_percentage: 10,
+    final_model_load: 'High',
+    blinks: 0,
+    gaze_away: 0,
+    face_detected: true,
+    synthetic_webcam: false,
+    cognitive_proba: [0.05, 0.15, 0.8],
+    v1_prediction: 'High',
+    v2_prediction: 'High',
+    v3_prediction: 'Medium',
+  })
+  assert.strictEqual(o.engagement, 'High')
   assert.strictEqual(o.final_cognitive_load, 'Low')
 })

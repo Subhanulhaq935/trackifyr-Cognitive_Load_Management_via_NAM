@@ -4,21 +4,25 @@ const FIVE_MINUTES_MS = 5 * 60 * 1000
 
 const HIGH_MSG = 'You seem overloaded, consider taking a break.'
 const LOW_MSG = 'You appear disengaged, try refocusing.'
+const MEDIUM_MSG = 'Your cognitive load is optimal. Keep up the good work!'
 
 /**
- * @param {'High'|'Low'} level
+ * @param {'High'|'Medium'|'Low'} level
  */
 function feedbackForLevel(level) {
   if (level === 'High') {
     return { type: 'warning', message: HIGH_MSG }
+  }
+  if (level === 'Medium') {
+    return { type: 'balanced', message: MEDIUM_MSG }
   }
   return { type: 'info', message: LOW_MSG }
 }
 
 /**
  * Returns the next payload with feedback_messages and internal streak state.
- * When `useWallClockStreak` is true (default): feedback is emitted once when High/Low
- * is sustained on every ingest for 5 minutes wall-clock (legacy / in-memory ingest).
+ * When `useWallClockStreak` is true (default): feedback is emitted once when High, Medium,
+ * or Low is sustained on every ingest for 5 minutes wall-clock (legacy / in-memory ingest).
  * When false: only carries prior messages; per-bucket dominant feedback is applied
  * separately for authenticated DB-backed users (PKT 5-minute buckets, same rule as Session logs).
  *
@@ -39,7 +43,7 @@ export function applySustainedLoadFeedback(currentPayload, previousPayload, nowM
   const nextList = priorList.slice(0, 19)
 
   const currentLevel = String(next.final_cognitive_load || '')
-  const tracked = currentLevel === 'High' || currentLevel === 'Low'
+  const tracked = currentLevel === 'High' || currentLevel === 'Low' || currentLevel === 'Medium'
 
   let streakLevel = null
   let streakStart = nowMs
@@ -57,7 +61,7 @@ export function applySustainedLoadFeedback(currentPayload, previousPayload, nowM
     }
 
     if (!emitted && nowMs - streakStart >= FIVE_MINUTES_MS) {
-      const cfg = feedbackForLevel(/** @type {'High'|'Low'} */ (streakLevel))
+      const cfg = feedbackForLevel(/** @type {'High'|'Medium'|'Low'} */ (streakLevel))
       nextList.unshift({
         id: `sustain-${String(streakLevel).toLowerCase()}-${nowMs}`,
         type: cfg.type,
@@ -92,7 +96,7 @@ export function applySustainedLoadFeedback(currentPayload, previousPayload, nowM
 }
 
 /**
- * When the current PKT 5-minute bucket is dominantly High or Low, emit the matching
+ * When the current PKT 5-minute bucket is dominantly High, Medium, or Low, emit the matching
  * message once per bucket window (deduped by bucket_start). Uses the same dominant rule
  * as Session logs ({@link dominantCognitiveLoadForBucketRow}).
  *
@@ -143,6 +147,16 @@ export function applyBucketDominantFeedback(payload, previousPayload, latestBuck
       timestamp: nowMs,
     })
     nextMark.low_newer = bucketKey
+  }
+  if (dom === 'Medium' && nextMark.medium_newer !== bucketKey) {
+    const cfg = feedbackForLevel('Medium')
+    list.unshift({
+      id: `bucket-medium-${bucketKey}`,
+      type: cfg.type,
+      message: cfg.message,
+      timestamp: nowMs,
+    })
+    nextMark.medium_newer = bucketKey
   }
 
   next.feedback_messages = list.slice(0, 19)

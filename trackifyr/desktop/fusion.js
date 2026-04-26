@@ -182,6 +182,14 @@ function fuseTracking(input) {
   if (activity_load <= 15 && engagement === 'Medium') {
     final_cognitive_load = 'Low'
   }
+  // Very low keyboard/mouse activity: treat cognitive load as Low even when facial/ML engagement reads High.
+  if (activity_load <= 15 && engagement === 'High') {
+    final_cognitive_load = 'Low'
+  }
+  // Medium engagement: High cognitive load only when average activity is very high (>= 80).
+  if (!synthetic_webcam && engagement === 'Medium' && final_cognitive_load === 'High' && activity_load < 80) {
+    final_cognitive_load = 'Medium'
+  }
 
   return {
     activity_load,

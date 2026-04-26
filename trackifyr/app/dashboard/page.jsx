@@ -35,6 +35,8 @@ export default function DashboardPage() {
   const [sessionTotalPages, setSessionTotalPages] = useState(1)
   const [weeklySeries, setWeeklySeries] = useState([])
   const sessionPageRef = useRef(1)
+  const sessionLogsColumnRef = useRef(null)
+  const [sessionLogsHeightPx, setSessionLogsHeightPx] = useState(null)
 
   const fetchLive = useCallback(async () => {
     try {
@@ -136,6 +138,23 @@ export default function DashboardPage() {
     }, DASH_POLL_MS)
     return () => clearInterval(idSessions)
   }, [isAuthenticated, fetchSessionsData])
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setSessionLogsHeightPx(null)
+      return
+    }
+    const el = sessionLogsColumnRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      const h = Math.round(el.getBoundingClientRect().height)
+      setSessionLogsHeightPx(Number.isFinite(h) && h > 0 ? h : null)
+    })
+    ro.observe(el)
+    const h0 = Math.round(el.getBoundingClientRect().height)
+    setSessionLogsHeightPx(Number.isFinite(h0) && h0 > 0 ? h0 : null)
+    return () => ro.disconnect()
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (!live || !live.hasData) {
@@ -249,8 +268,8 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
+            <div ref={sessionLogsColumnRef} className="lg:col-span-2 min-w-0">
               <SessionLogsTable
                 sessions={sessions}
                 page={sessionPage}
@@ -260,8 +279,11 @@ export default function DashboardPage() {
                 onPageChange={(p) => setSessionPage(p)}
               />
             </div>
-            <div>
-              <FeedbackPanel messages={Array.isArray(live?.feedback_messages) ? live.feedback_messages : []} />
+            <div className="min-w-0 flex flex-col">
+              <FeedbackPanel
+                columnMaxHeightPx={sessionLogsHeightPx}
+                messages={Array.isArray(live?.feedback_messages) ? live.feedback_messages : []}
+              />
             </div>
           </div>
         </main>

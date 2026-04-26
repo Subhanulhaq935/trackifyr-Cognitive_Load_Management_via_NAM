@@ -1,9 +1,10 @@
 /**
- * @fileoverview Feedback panel — renders messages from props only (empty by default).
+ * @fileoverview Feedback panel — messages with optional height cap (dashboard) and prev/next navigation.
  */
 
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import { formatPktDateTimeFull } from '@/lib/pktTime'
 
 const FEEDBACK_CONFIGS = {
@@ -37,6 +38,21 @@ const FEEDBACK_CONFIGS = {
     text: 'text-blue-800',
     iconBg: 'bg-blue-100',
   },
+  balanced: {
+    icon: (
+      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <path
+          fillRule="evenodd"
+          d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 102 0V6zm-1 7a1 1 0 100-2 1 1 0 000 2z"
+          clipRule="evenodd"
+        />
+      </svg>
+    ),
+    bg: 'bg-indigo-50',
+    border: 'border-indigo-400',
+    text: 'text-indigo-900',
+    iconBg: 'bg-indigo-100',
+  },
   success: {
     icon: (
       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -66,48 +82,107 @@ const getFeedbackConfig = (type) => {
   return FEEDBACK_CONFIGS[type] || DEFAULT_FEEDBACK_CONFIG
 }
 
-export default function FeedbackPanel({ messages = [] }) {
-  const list = Array.isArray(messages) ? messages : []
+/**
+ * @param {object} props
+ * @param {unknown[]} [props.messages]
+ * @param {number | null} [props.columnMaxHeightPx] — cap panel height to match session logs column (dashboard)
+ */
+export default function FeedbackPanel({ messages = [], columnMaxHeightPx = null }) {
+  const list = useMemo(() => (Array.isArray(messages) ? messages : []), [messages])
+  const [index, setIndex] = useState(0)
+  const fingerprint = useMemo(() => list.map((m) => String(m?.id ?? '')).join('\0'), [list])
+
+  useEffect(() => {
+    setIndex(0)
+  }, [fingerprint])
+
+  useEffect(() => {
+    setIndex((i) => {
+      if (list.length === 0) return 0
+      return Math.min(Math.max(0, i), list.length - 1)
+    })
+  }, [list.length])
+
+  const current = list[index]
+  const currentConfig = current ? getFeedbackConfig(current.type) : null
+  const outerStyle =
+    typeof columnMaxHeightPx === 'number' && columnMaxHeightPx > 0
+      ? { maxHeight: columnMaxHeightPx }
+      : undefined
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Feedback</h2>
-          <p className="text-sm text-gray-500 mt-1">From your monitoring pipeline when available</p>
+    <div
+      className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 flex flex-col min-h-0 overflow-hidden"
+      style={outerStyle}
+    >
+      <div className="px-6 pt-6 pb-4 shrink-0 border-b border-gray-100">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Feedback</h2>
+            <p className="text-sm text-gray-500 mt-1">From your monitoring pipeline when available</p>
+          </div>
         </div>
       </div>
+
       {list.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+        <p className="text-sm text-gray-500 px-6 py-8 text-center border-t border-dashed border-gray-200 bg-gray-50/50">
           No feedback yet
         </p>
       ) : (
-        <div className="space-y-4">
-          {list.map((feedback) => {
-            const config = getFeedbackConfig(feedback.type)
-            return (
+        <>
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4" role="region" aria-label="Feedback messages">
+            {current && currentConfig ? (
               <div
-                key={feedback.id}
-                className={`p-4 rounded-xl border-l-4 ${config.border} ${config.bg} hover:shadow-md transition-all duration-200`}
+                key={current.id}
+                className={`p-4 rounded-xl border-l-4 ${currentConfig.border} ${currentConfig.bg} hover:shadow-md transition-all duration-200`}
               >
                 <div className="flex items-start space-x-3">
-                  <div className={`p-2 rounded-lg ${config.iconBg} ${config.text} flex-shrink-0`}>{config.icon}</div>
+                  <div className={`p-2 rounded-lg ${currentConfig.iconBg} ${currentConfig.text} shrink-0`}>
+                    {currentConfig.icon}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-semibold ${config.text} mb-1`}>{feedback.message}</p>
-                    {feedback.timestamp ? (
+                    <p className={`text-sm font-semibold ${currentConfig.text} mb-1`}>{current.message}</p>
+                    {current.timestamp ? (
                       <div className="flex items-center space-x-1 text-xs text-gray-500 mt-2">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>{formatPktDateTimeFull(new Date(feedback.timestamp))}</span>
+                        <span>{formatPktDateTimeFull(new Date(current.timestamp))}</span>
                       </div>
                     ) : null}
                   </div>
                 </div>
               </div>
-            )
-          })}
-        </div>
+            ) : null}
+          </div>
+
+          <div className="px-4 py-3 border-t border-gray-100 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gray-50/50">
+            <p className="text-xs text-gray-500 text-center sm:text-left">
+              {index + 1} of {list.length}
+              <span className="hidden sm:inline text-gray-400"> · newest first</span>
+            </p>
+            <div className="flex items-center justify-center sm:justify-end gap-1">
+              <button
+                type="button"
+                disabled={index <= 0}
+                aria-label="Newer feedback"
+                onClick={() => setIndex((i) => Math.max(0, i - 1))}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={index >= list.length - 1}
+                aria-label="Older feedback"
+                onClick={() => setIndex((i) => Math.min(list.length - 1, i + 1))}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
