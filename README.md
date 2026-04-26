@@ -1,12 +1,12 @@
 # trackifyr: AI-Based Cognitive Load Estimation via Natural Activity Monitoring
 
-**Final Year Project (FYP)** — integrated system (web dashboard, desktop client, and ML pipeline). The codebase is **near release-complete**: end-to-end session capture, optional webcam-based cognitive load (v1 / v2 / v3 models with ensemble voting), dashboard analytics, and a **packaged Windows desktop build** (see [Releases](https://github.com/Subhanulhaq935/trackifyr-Cognitive_Load_Management_via_NAM/releases); app version **1.0.3** in `trackifyr/desktop`).
+**Final Year Project (FYP)**
 
-trackifyr estimates cognitive load in real time by combining natural digital behaviors—mouse and keyboard activity, and (optionally) facial / gaze-related cues from the webcam—with models trained on **DAiSEE** and related pipelines. Outputs are **Low**, **Medium**, and **High** cognitive load, surfaced in the desktop client and on the web dashboard with sessions, charts, and reports.
+trackifyr is an intelligent AI system designed to estimate cognitive load in real-time by analyzing natural user activities during digital work and study sessions. Unlike traditional digital wellbeing tools that only measure screen time, trackifyr uses multimodal behavioral signals (facial expressions, gaze patterns, keyboard, and mouse interactions) to classify cognitive load into three categories: **Low**, **Medium**, and **High**.
 
 ---
 
-## Team Members
+## 👥 Team Members
 
 | Name | Registration # | Email | Contact |
 |------|----------------|-------|---------|
@@ -16,7 +16,7 @@ trackifyr estimates cognitive load in real time by combining natural digital beh
 
 ---
 
-## Project Overview
+## 📋 Project Overview
 
 | Field | Description |
 |-------|-------------|
@@ -25,12 +25,12 @@ trackifyr estimates cognitive load in real time by combining natural digital beh
 | **Nature of Project** | R&D (Research and Development) |
 | **Degree** | BS (Hons.) Computer Science |
 | **Session** | 2022-2026 |
-| **Project Advisor** | Prof. Tayyaba Tariq |
+| **Project Advisor** | Dr. Tayyaba Tariq |
 | **Institution** | Department of Computer Science, FCIT, University of the Punjab |
 
 ---
 
-## Project Goal
+## 🎯 Project Goal
 
 Design and develop an AI-based system that estimates cognitive load (Low, Medium, High) in real time using multimodal signals:
 
@@ -41,9 +41,9 @@ Design and develop an AI-based system that estimates cognitive load (Low, Medium
 
 ---
 
-## System Overview (Current)
+## 🧠 System Overview (Current)
 
-### Implemented
+### ✅ Implemented
 
 **Desktop application (Electron)**  
 - Windows installer via `electron-builder` (NSIS); Python tracking and models bundled as app resources where configured  
@@ -67,7 +67,7 @@ Design and develop an AI-based system that estimates cognitive load (Low, Medium
 - Python `unittest` for tracker and webcam/ensemble paths; Node tests for fusion bridge  
 - Scripts for desktop release packaging and optional tracking venv setup (`scripts/`)
 
-### Remaining / stretch (polish and evaluation)
+### 🔄 Remaining / stretch (polish and evaluation)
 
 - Broader user studies and formal evaluation write-up  
 - Optional: teacher / cohort dashboards, advanced break-notification policies  
@@ -75,7 +75,7 @@ Design and develop an AI-based system that estimates cognitive load (Low, Medium
 
 ---
 
-## Technology Stack
+## 🛠️ Technology Stack
 
 | Layer | Technologies |
 |-------|----------------|
@@ -89,7 +89,7 @@ Design and develop an AI-based system that estimates cognitive load (Low, Medium
 
 ---
 
-## Key Resources
+## 📊 Key Resources
 
 | Resource | Notes |
 |----------|--------|
@@ -99,7 +99,7 @@ Design and develop an AI-based system that estimates cognitive load (Low, Medium
 
 ---
 
-## Repository Structure
+## 📁 Repository Structure
 
 ```
 trackifyr-Cognitive_Load_Management_via_NAM/
@@ -124,7 +124,7 @@ trackifyr-Cognitive_Load_Management_via_NAM/
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 
@@ -170,36 +170,36 @@ Use the in-app **Download** flow or the repository **Releases** page for the lat
 
 ---
 
-## Project Status
+## 📈 Project Status
 
-### Done
+### Done ✅
 
-- Requirements, architecture, and core documentation trajectory  
-- Activity tracker (mouse / keyboard, interval summaries)  
-- Web dashboard: auth, profile, dashboard, reports, tracking APIs, PostgreSQL integration  
-- DAiSEE-oriented training pipeline and evaluation scripts  
-- MediaPipe-based features, classical and deep temporal model (v3), ensemble fusion  
-- Electron desktop client with bundled tracking/ML layout and versioned releases  
-- Download page wired to latest GitHub Release asset where configured  
+- ✅ Requirements, architecture, and core documentation trajectory  
+- ✅ Activity tracker (mouse / keyboard, interval summaries)  
+- ✅ Web dashboard: auth, profile, dashboard, reports, tracking APIs, PostgreSQL integration  
+- ✅ DAiSEE-oriented training pipeline and evaluation scripts  
+- ✅ MediaPipe-based features, classical and deep temporal model (v3), ensemble fusion  
+- ✅ Electron desktop client with bundled tracking/ML layout and versioned releases  
+- ✅ Download page wired to latest GitHub Release asset where configured  
 
-### In progress / final polish
+### In progress / final polish 🔄
 
-- Final FYP report, demos, and evaluation metrics narrative  
-- Any remaining UX and deployment hardening for evaluators  
-
----
-
-## Success Criteria (mapping)
-
-1. Categorize cognitive load as **Low / Medium / High** with trained models on DAiSEE-aligned pipelines and ensemble behavior.  
-2. **Real-time** monitoring via desktop client with acceptable latency for lab and daily use.  
-3. **Multimodal** inputs: keyboard, mouse, and optional webcam path into a single fused label for the session UI.  
-4. **Web dashboard** for logs, visualizations, and session reporting.  
-5. Meet supervisor-defined objectives for a practical NAM-based cognitive load tool.  
+- 🔄 Final FYP report, demos, and evaluation metrics narrative  
+- 🔄 Any remaining UX and deployment hardening for evaluators  
 
 ---
 
-## Research Contributions
+## 🎓 Success Criteria (mapping)
+
+1. ✅ Categorize cognitive load as **Low / Medium / High** with trained models on DAiSEE-aligned pipelines and ensemble behavior.  
+2. ✅ **Real-time** monitoring via desktop client with acceptable latency for lab and daily use.  
+3. ✅ **Multimodal** inputs: keyboard, mouse, and optional webcam path into a single fused label for the session UI.  
+4. ✅ **Web dashboard** for logs, visualizations, and session reporting.  
+5. ✅ Meet supervisor-defined objectives for a practical NAM-based cognitive load tool.  
+Dr
+---
+
+## 📚 Research Contributions
 
 ### Gaps addressed
 
@@ -214,7 +214,7 @@ Use the in-app **Download** flow or the repository **Releases** page for the lat
 
 ---
 
-## Notes for Evaluators
+## 📎 Notes for Evaluators
 
 - Changes are traceable via Git history and release tags.  
 - Modular layout: `app/api/*` for server behavior, `ml/*` for models/features, `desktop/*` for the Electron shell.  
@@ -222,17 +222,17 @@ Use the in-app **Download** flow or the repository **Releases** page for the lat
 
 ---
 
-## Contact
+## 📬 Contact
 
-**Project advisor:** Prof. Tayyaba Tariq  
+**Project advisor:** Dr. Tayyaba Tariq  
 **Group leader:** Muhammad Moin U Din (bcsf22m023@pucit.edu.pk)  
 
 ---
 
-## License
+## 📄 License
 
 This project is developed as part of the Final Year Project (FYP) at the Department of Computer Science, FCIT, University of the Punjab.
 
 ---
 
-**trackifyr** — monitoring cognitive load through natural activity analysis.
+**✨ trackifyr** - monitoring cognitive load through natural activity analysis.

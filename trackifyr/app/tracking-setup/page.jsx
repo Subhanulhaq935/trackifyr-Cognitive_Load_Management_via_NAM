@@ -7,9 +7,16 @@ export default function TrackingSetupPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 px-4 py-10">
       <div className="mx-auto max-w-3xl">
         <div className="rounded-3xl border border-indigo-100 bg-white/90 p-8 shadow-lg backdrop-blur-sm sm:p-10">
-          <h1 className="mb-8 text-center text-2xl font-bold text-gray-900 sm:text-3xl">
+          <h1 className="mb-4 text-center text-2xl font-bold text-gray-900 sm:text-3xl">
             Desktop Tracking Setup
           </h1>
+          <p className="mb-8 text-center text-sm text-gray-600">
+            Need the Windows installer first?{' '}
+            <Link href="/download?from=tracking-setup" className="font-semibold text-indigo-600 hover:text-indigo-700">
+              Download desktop app
+            </Link>
+            .
+          </p>
 
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <a
