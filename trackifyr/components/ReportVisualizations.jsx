@@ -1,6 +1,9 @@
 'use client'
 
+import { useMemo } from 'react'
 import { ACTIVITY_PERCENT_LABEL, ACTIVITY_SCALE_MAX } from '@/lib/activityMetrics'
+import { chartTooltipStyle, getChartPalette } from '@/lib/chartPalette'
+import { useTheme } from '@/context/ThemeContext'
 import {
   Bar,
   CartesianGrid,
@@ -19,11 +22,9 @@ import {
 } from 'recharts'
 
 const COG_COLORS = { High: '#dc2626', Medium: '#ca8a04', Low: '#16a34a', '—': '#9ca3af' }
-const TOOLTIP_STYLE = {
-  backgroundColor: 'rgba(255, 255, 255, 0.96)',
-  border: '1px solid #e5e7eb',
-  borderRadius: '8px',
-}
+
+const cardClass =
+  'rounded-2xl border border-gray-100 bg-white/90 p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/90'
 
 function parseActivityPct(s) {
   if (s == null) return null
@@ -38,6 +39,12 @@ function shortTimeLabel(timeWindow) {
 }
 
 export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], chartSeries = [] }) {
+  const { resolvedDark } = useTheme()
+  const palette = useMemo(() => getChartPalette(resolvedDark), [resolvedDark])
+  const tooltipStyle = useMemo(() => chartTooltipStyle(palette), [palette])
+  const tickSm = { fontSize: 9, fill: palette.tickFill }
+  const tickMd = { fontSize: 11, fill: palette.tickFill }
+
   const cognitiveCounts = { High: 0, Medium: 0, Low: 0 }
   for (const r of dailyRows) {
     const k = String(r.cognitiveLoad || '').trim()
@@ -77,18 +84,18 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
 
   if (!hasPie && !hasActivityBars && !hasTrend && !hasWeekly) {
     return (
-      <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 p-8 text-center text-sm text-gray-500 mb-6">
+      <div className="mb-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 p-8 text-center text-sm text-gray-500 dark:border-slate-600 dark:bg-slate-800/50 dark:text-slate-400">
         No data
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 mb-8">
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div className="mb-8 space-y-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {hasPie ? (
-          <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">Cognitive load</h3>
+          <div className={cardClass}>
+            <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-slate-200">Cognitive load</h3>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -105,8 +112,8 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
                       <Cell key={entry.name} fill={COG_COLORS[entry.name] || '#6366f1'} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Legend />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend wrapperStyle={{ color: palette.tooltipColor }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -114,19 +121,26 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
         ) : null}
 
         {hasActivityBars ? (
-          <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">{ACTIVITY_PERCENT_LABEL} by 5-min window</h3>
+          <div className={cardClass}>
+            <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-slate-200">
+              {ACTIVITY_PERCENT_LABEL} by 5-min window
+            </h3>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={activityBars} margin={{ top: 8, right: 8, left: 0, bottom: 64 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="slot" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 9, fill: '#6b7280' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
+                  <XAxis dataKey="slot" angle={-45} textAnchor="end" height={70} tick={tickSm} />
                   <YAxis
                     domain={[0, ACTIVITY_SCALE_MAX]}
-                    tick={{ fontSize: 11 }}
-                    label={{ value: ACTIVITY_PERCENT_LABEL, angle: -90, position: 'insideLeft', fill: '#6b7280' }}
+                    tick={tickMd}
+                    label={{
+                      value: ACTIVITY_PERCENT_LABEL,
+                      angle: -90,
+                      position: 'insideLeft',
+                      style: { fill: palette.axisLabel },
+                    }}
                   />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Tooltip contentStyle={tooltipStyle} />
                   <Bar
                     dataKey="activity"
                     fill="#6366f1"
@@ -140,16 +154,18 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
         ) : null}
 
         {hasTrend ? (
-          <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">{ACTIVITY_PERCENT_LABEL} (PKT day, 5-min means)</h3>
+          <div className={`${cardClass} xl:col-span-2`}>
+            <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-slate-200">
+              {ACTIVITY_PERCENT_LABEL} (PKT day, 5-min means)
+            </h3>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={activityTrend} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="t" angle={-35} textAnchor="end" height={60} tick={{ fontSize: 10, fill: '#6b7280' }} />
-                  <YAxis domain={[0, ACTIVITY_SCALE_MAX]} tick={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Legend />
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
+                  <XAxis dataKey="t" angle={-35} textAnchor="end" height={60} tick={{ fontSize: 10, fill: palette.tickFill }} />
+                  <YAxis domain={[0, ACTIVITY_SCALE_MAX]} tick={tickMd} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend wrapperStyle={{ color: palette.tooltipColor }} />
                   <Line
                     type="monotone"
                     dataKey="load"
@@ -165,17 +181,17 @@ export default function ReportVisualizations({ dailyRows = [], weeklyRows = [], 
         ) : null}
 
         {hasWeekly ? (
-          <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">7 days</h3>
+          <div className={`${cardClass} xl:col-span-2`}>
+            <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-slate-200">7 days</h3>
             <div style={{ height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={weeklyTrend} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#6b7280' }} />
-                  <YAxis yAxisId="act" orientation="left" domain={[0, ACTIVITY_SCALE_MAX]} tick={{ fontSize: 11 }} />
-                  <YAxis yAxisId="win" orientation="right" allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Legend />
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
+                  <XAxis dataKey="day" tick={tickMd} />
+                  <YAxis yAxisId="act" orientation="left" domain={[0, ACTIVITY_SCALE_MAX]} tick={tickMd} />
+                  <YAxis yAxisId="win" orientation="right" allowDecimals={false} tick={tickMd} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend wrapperStyle={{ color: palette.tooltipColor }} />
                   <Bar yAxisId="win" dataKey="windows" fill="#10b981" name="5-min windows" radius={[6, 6, 0, 0]} />
                   <Line
                     yAxisId="act"

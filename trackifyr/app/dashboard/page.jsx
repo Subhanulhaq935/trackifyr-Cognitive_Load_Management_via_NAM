@@ -222,7 +222,7 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 lg:pl-64">
         <Header title="Dashboard" />
@@ -232,17 +232,17 @@ export default function DashboardPage() {
             {statsCards.map((stat, index) => (
               <div
                 key={index}
-                className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-100 p-4 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+                className="rounded-xl border border-gray-100 bg-white/80 p-4 shadow-md backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900/85"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className={`p-2 rounded-lg ${STATS_CARD_COLORS[stat.color] || 'bg-gray-100 text-gray-600'}`}>{stat.icon}</div>
-                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 text-gray-700 max-w-[min(100%,140px)] truncate" title={stat.change}>
+                  <span className="max-w-[min(100%,140px)] truncate rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700 dark:bg-slate-800 dark:text-slate-300" title={stat.change}>
                     {stat.change}
                   </span>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-600 mb-0.5">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="mb-0.5 text-xs font-medium text-gray-600 dark:text-slate-400">{stat.title}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{stat.value}</p>
                 </div>
               </div>
             ))}

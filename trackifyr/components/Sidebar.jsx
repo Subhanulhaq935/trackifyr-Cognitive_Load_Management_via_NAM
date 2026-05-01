@@ -41,6 +41,15 @@ export default function Sidebar() {
         </svg>
       )
     },
+    {
+      name: 'About',
+      href: '/about',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
   ]
 
   const pathOnly = (href) => href.split('?')[0]
@@ -50,9 +59,9 @@ export default function Sidebar() {
     <aside className="hidden lg:flex lg:flex-shrink-0 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30">
       <div className="flex flex-col w-64 h-full">
         {/* Sidebar Container */}
-        <div className="flex flex-col h-full bg-white border-r border-gray-200">
+        <div className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-900">
           {/* Logo/Brand Section */}
-          <div className="flex items-center h-16 px-6 border-b border-gray-100 flex-shrink-0">
+          <div className="flex h-16 flex-shrink-0 items-center border-b border-gray-100 px-6 dark:border-slate-700">
             <div className="flex items-center space-x-3">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,8 +69,8 @@ export default function Sidebar() {
                 </svg>
               </div>
               <div className="min-w-0">
-                <h1 className="text-base font-semibold text-gray-900 leading-tight">trackifyr</h1>
-                <p className="text-xs text-gray-500 leading-tight">Cognitive Load Estimation via Natural Activity Monitoring</p>
+                <h1 className="text-base font-semibold leading-tight text-gray-900 dark:text-slate-100">trackifyr</h1>
+                <p className="text-xs leading-tight text-gray-500 dark:text-slate-400">Cognitive Load Estimation via Natural Activity Monitoring</p>
               </div>
             </div>
           </div>
@@ -79,19 +88,21 @@ export default function Sidebar() {
                     transition-all duration-200
                     ${
                       isActive(item.href)
-                        ? 'bg-indigo-50 text-indigo-700'
-                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
                     }
                   `}
                 >
                   <span className={`mr-3 ${
-                    isActive(item.href) ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-500'
+                    isActive(item.href)
+                      ? 'text-indigo-600 dark:text-indigo-400'
+                      : 'text-gray-400 group-hover:text-gray-500 dark:text-slate-500 dark:group-hover:text-slate-400'
                   } transition-colors duration-200`}>
                     {item.icon}
                   </span>
                   {item.name}
                   {isActive(item.href) && (
-                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-600"></span>
+                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
                   )}
                 </Link>
               ))}

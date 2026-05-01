@@ -4,7 +4,10 @@
 
 'use client'
 
+import { useMemo } from 'react'
 import { ACTIVITY_PERCENT_LABEL, ACTIVITY_SCALE_MAX } from '@/lib/activityMetrics'
+import { chartTooltipStyle, getChartPalette } from '@/lib/chartPalette'
+import { useTheme } from '@/context/ThemeContext'
 import {
   Bar,
   BarChart,
@@ -19,11 +22,9 @@ import {
 } from 'recharts'
 
 const CHART_HEIGHT = 300
-const TOOLTIP_STYLE = {
-  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  border: '1px solid #e5e7eb',
-  borderRadius: '8px',
-}
+
+const cardShell =
+  'rounded-2xl border border-gray-100 bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/85'
 
 function tierIndexToLabel(v) {
   if (v === 1) return 'Low'
@@ -34,13 +35,13 @@ function tierIndexToLabel(v) {
 
 function EmptyChart({ title, subtitle }) {
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-6">
+    <div className={cardShell}>
       <div className="mb-4">
-        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-        <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">{title}</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{subtitle}</p>
       </div>
       <div
-        className="flex items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50/80 text-gray-500 text-sm px-4 text-center"
+        className="flex items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 text-center text-sm text-gray-500 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
         style={{ minHeight: CHART_HEIGHT }}
       >
         No data yet
@@ -54,6 +55,12 @@ export default function CognitiveLoadCharts({
   dailySeries = [],
   hasWeeklyData: hasWeeklyDataProp,
 }) {
+  const { resolvedDark } = useTheme()
+  const palette = useMemo(() => getChartPalette(resolvedDark), [resolvedDark])
+  const tooltipStyle = useMemo(() => chartTooltipStyle(palette), [palette])
+  const tick = { fontSize: 11, fill: palette.tickFill }
+  const axisLabelStyle = { fill: palette.axisLabel }
+
   const hasLoad = Array.isArray(loadSeries) && loadSeries.length > 0
   const hasDaily =
     typeof hasWeeklyDataProp === 'boolean'
@@ -65,23 +72,24 @@ export default function CognitiveLoadCharts({
         )
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className={cardShell}>
+        <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Cognitive load (today)</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Cognitive load (today)</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
               {ACTIVITY_PERCENT_LABEL} (5-minute bucket mean, same 0–{ACTIVITY_SCALE_MAX} scale as live) and
-              webcam-based engagement (Low → High) where ML samples exist — current PKT day
+              webcam-based engagement (Low → High) where ML samples exist: current PKT day
             </p>
           </div>
         </div>
         {!hasLoad ? (
           <div
-            className="flex items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50/80 text-gray-500 text-sm px-4 text-center"
+            className="flex items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 text-center text-sm text-gray-500 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
             style={{ minHeight: CHART_HEIGHT }}
           >
-            No 5-minute data for today (PKT) yet — run the desktop app to record activity; past buckets stay visible after you close it
+            No 5-minute data for today (PKT) yet. Run the desktop app to record activity; past buckets stay visible after
+            you close it
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
@@ -96,25 +104,30 @@ export default function CognitiveLoadCharts({
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="time" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 11, fill: '#6b7280' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
+              <XAxis dataKey="time" angle={-45} textAnchor="end" height={80} tick={tick} />
               <YAxis
                 yAxisId="left"
-                label={{ value: ACTIVITY_PERCENT_LABEL, angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
-                tick={{ fontSize: 11, fill: '#6b7280' }}
+                label={{
+                  value: ACTIVITY_PERCENT_LABEL,
+                  angle: -90,
+                  position: 'insideLeft',
+                  style: axisLabelStyle,
+                }}
+                tick={tick}
                 domain={[0, ACTIVITY_SCALE_MAX]}
               />
               <YAxis
                 yAxisId="right"
                 orientation="right"
-                label={{ value: 'Engagement', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }}
-                tick={{ fontSize: 11, fill: '#6b7280' }}
+                label={{ value: 'Engagement', angle: 90, position: 'insideRight', style: axisLabelStyle }}
+                tick={tick}
                 domain={[0.5, 3.5]}
                 ticks={[1, 2, 3]}
                 tickFormatter={(x) => tierIndexToLabel(x)}
               />
               <Tooltip
-                contentStyle={TOOLTIP_STYLE}
+                contentStyle={tooltipStyle}
                 formatter={(value, name) => {
                   if (name === 'Engagement') {
                     if (value == null || Number.isNaN(Number(value))) return ['—', 'Engagement']
@@ -123,7 +136,7 @@ export default function CognitiveLoadCharts({
                   return [value, name]
                 }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ color: palette.tooltipColor }} />
               <Area
                 yAxisId="left"
                 type="stepAfter"
@@ -153,41 +166,41 @@ export default function CognitiveLoadCharts({
       {!hasDaily ? (
         <EmptyChart
           title="Weekly aggregates"
-          subtitle="Ingest tracking for a few minutes — 5-minute buckets roll up into the last 7 PKT days here"
+          subtitle="Ingest tracking for a few minutes: 5-minute buckets roll up into the last 7 PKT days here"
         />
       ) : (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-6">
+        <div className={cardShell}>
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Weekly aggregates</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Rolling 7 PKT calendar days: mean {ACTIVITY_PERCENT_LABEL} per day (same 0–{ACTIVITY_SCALE_MAX} samples as session logs) and
-              number of 5-minute windows with data — updates while you ingest
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Weekly aggregates</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+              Rolling 7 PKT calendar days: mean {ACTIVITY_PERCENT_LABEL} per day (same 0–{ACTIVITY_SCALE_MAX} samples as
+              session logs) and number of 5-minute windows with data. Updates while you ingest
             </p>
           </div>
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <BarChart data={dailySeries}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#6b7280' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
+              <XAxis dataKey="day" tick={tick} />
               <YAxis
                 yAxisId="act"
                 label={{
                   value: `${ACTIVITY_PERCENT_LABEL} (day mean, 0–${ACTIVITY_SCALE_MAX})`,
                   angle: -90,
                   position: 'insideLeft',
-                  style: { fill: '#6b7280' },
+                  style: axisLabelStyle,
                 }}
-                tick={{ fontSize: 11, fill: '#6b7280' }}
+                tick={tick}
                 domain={[0, ACTIVITY_SCALE_MAX]}
               />
               <YAxis
                 yAxisId="win"
                 orientation="right"
-                label={{ value: '5-min windows', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }}
-                tick={{ fontSize: 11, fill: '#6b7280' }}
+                label={{ value: '5-min windows', angle: 90, position: 'insideRight', style: axisLabelStyle }}
+                tick={tick}
                 allowDecimals={false}
               />
-              <Tooltip contentStyle={TOOLTIP_STYLE} />
-              <Legend />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ color: palette.tooltipColor }} />
               <Bar
                 yAxisId="act"
                 dataKey="avgActivity"

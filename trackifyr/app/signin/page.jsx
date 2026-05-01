@@ -92,13 +92,13 @@ export default function SigninPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-gray-50 px-4 py-12 sm:px-6 lg:px-8 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div 
         className={`w-full max-w-lg transition-all duration-700 ease-out ${
           mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
         }`}
       >
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
           {/* Project Branding Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-5 border-b border-blue-700">
             <div className="flex items-center space-x-3">
@@ -116,13 +116,13 @@ export default function SigninPage() {
 
           <div className="px-8 py-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-1">Welcome Back</h2>
-              <p className="text-gray-600 text-sm">Sign in to access your dashboard</p>
+              <h2 className="mb-1 text-2xl font-semibold text-gray-900 dark:text-slate-100">Welcome Back</h2>
+              <p className="text-sm text-gray-600 dark:text-slate-400">Sign in to access your dashboard</p>
             </div>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-300">
                   Email Address
                 </label>
                 <div className="relative">
@@ -137,11 +137,11 @@ export default function SigninPage() {
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`block w-full pl-12 pr-4 py-3 border ${
+                    className={`block w-full rounded-lg border py-3 pl-12 pr-4 transition-all duration-200 focus:outline-none focus:ring-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:bg-slate-800 dark:hover:border-slate-500 ${
                       errors.email 
                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
-                        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                    } rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 bg-gray-50 focus:bg-white hover:border-gray-400`}
+                        : 'border-gray-300 bg-gray-50 focus:border-blue-500 focus:bg-white focus:ring-blue-500 hover:border-gray-400'
+                    }`}
                     placeholder="your.email@university.edu"
                   />
                 </div>
@@ -156,7 +156,7 @@ export default function SigninPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="password" className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-300">
                   Password
                 </label>
                 <div className="relative">
@@ -171,11 +171,11 @@ export default function SigninPage() {
                     type="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className={`block w-full pl-12 pr-4 py-3 border ${
+                    className={`block w-full rounded-lg border py-3 pl-12 pr-4 transition-all duration-200 focus:outline-none focus:ring-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:bg-slate-800 dark:hover:border-slate-500 ${
                       errors.password 
                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
-                        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                    } rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 bg-gray-50 focus:bg-white hover:border-gray-400`}
+                        : 'border-gray-300 bg-gray-50 focus:border-blue-500 focus:bg-white focus:ring-blue-500 hover:border-gray-400'
+                    }`}
                     placeholder="••••••••"
                   />
                 </div>
@@ -190,12 +190,12 @@ export default function SigninPage() {
               </div>
 
               {errors.submit && (
-                <div className="rounded-lg bg-red-50 border border-red-200 p-4 transition-all duration-200">
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 transition-all duration-200 dark:border-red-900/50 dark:bg-red-950/40">
                   <div className="flex items-center">
-                    <svg className="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="mr-2 h-5 w-5 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
-                    <p className="text-sm font-medium text-red-800">{errors.submit}</p>
+                    <p className="text-sm font-medium text-red-800 dark:text-red-200">{errors.submit}</p>
                   </div>
                 </div>
               )}
@@ -204,7 +204,7 @@ export default function SigninPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0"
+                  className="w-full transform rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3.5 font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-slate-900"
                 >
                   {isSubmitting ? (
                     <>
@@ -225,8 +225,8 @@ export default function SigninPage() {
                 </button>
               </div>
 
-              <div className="text-center pt-4 space-y-3">
-                <p className="text-sm text-gray-600">
+              <div className="space-y-3 pt-4 text-center">
+                <p className="text-sm text-gray-600 dark:text-slate-400">
                   Don&apos;t have an account?{' '}
                   <Link 
                     href="/signup" 
@@ -238,10 +238,10 @@ export default function SigninPage() {
                     </svg>
                   </Link>
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-slate-400">
                   <Link
                     href="/download?from=signin"
-                    className="font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-200 inline-flex items-center justify-center gap-1.5"
+                    className="inline-flex items-center justify-center gap-1.5 font-semibold text-blue-600 transition-colors duration-200 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

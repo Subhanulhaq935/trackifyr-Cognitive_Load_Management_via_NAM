@@ -9,6 +9,7 @@ export default function DownloadBackLink() {
   let href = '/signin'
   if (from === 'dashboard') href = '/dashboard'
   else if (from === 'tracking-setup') href = '/tracking-setup'
+  else if (from === 'about') href = '/about'
   else if (from === 'signin') href = '/signin'
 
   return (

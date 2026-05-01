@@ -7,18 +7,6 @@ import {
   SESSION_LOGS_ACTIVITY_SUBLINE,
 } from '@/lib/activityMetrics'
 
-export async function fetchReportPayload(period) {
-  const res = await fetch(`/api/tracking/report?period=${period}`, {
-    cache: 'no-store',
-    credentials: 'same-origin',
-  })
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok || !data?.ok) {
-    throw new Error(data?.error || 'Could not load report data')
-  }
-  return data
-}
-
 async function loadPdfLibs() {
   const [jspdfMod, autoTableMod] = await Promise.all([import('jspdf'), import('jspdf-autotable')])
   const jsPDF = jspdfMod.jsPDF || jspdfMod.default

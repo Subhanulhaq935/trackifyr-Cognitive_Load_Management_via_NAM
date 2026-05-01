@@ -112,38 +112,40 @@ export default function FeedbackPanel({ messages = [], columnMaxHeightPx = null 
 
   return (
     <div
-      className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 flex flex-col min-h-0 overflow-hidden"
+      className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white/80 shadow-lg backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/85"
       style={outerStyle}
     >
-      <div className="px-6 pt-6 pb-4 shrink-0 border-b border-gray-100">
+      <div className="shrink-0 border-b border-gray-100 px-6 pb-4 pt-6 dark:border-slate-700">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Feedback</h2>
-            <p className="text-sm text-gray-500 mt-1">From your monitoring pipeline when available</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Feedback</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">From your monitoring pipeline when available</p>
           </div>
         </div>
       </div>
 
       {list.length === 0 ? (
-        <p className="text-sm text-gray-500 px-6 py-8 text-center border-t border-dashed border-gray-200 bg-gray-50/50">
+        <p className="border-t border-dashed border-gray-200 bg-gray-50/50 px-6 py-8 text-center text-sm text-gray-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
           No feedback yet
         </p>
       ) : (
         <>
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4" role="region" aria-label="Feedback messages">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4" role="region" aria-label="Feedback messages">
             {current && currentConfig ? (
               <div
                 key={current.id}
-                className={`p-4 rounded-xl border-l-4 ${currentConfig.border} ${currentConfig.bg} hover:shadow-md transition-all duration-200`}
+                className={`rounded-xl border-l-4 p-4 transition-all duration-200 hover:shadow-md ${currentConfig.border} ${currentConfig.bg} dark:border-slate-500 dark:bg-slate-800/80`}
               >
                 <div className="flex items-start space-x-3">
-                  <div className={`p-2 rounded-lg ${currentConfig.iconBg} ${currentConfig.text} shrink-0`}>
+                  <div
+                    className={`shrink-0 rounded-lg p-2 ${currentConfig.iconBg} ${currentConfig.text} dark:bg-slate-700 dark:text-slate-200`}
+                  >
                     {currentConfig.icon}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-semibold ${currentConfig.text} mb-1`}>{current.message}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className={`mb-1 text-sm font-semibold ${currentConfig.text} dark:text-slate-100`}>{current.message}</p>
                     {current.timestamp ? (
-                      <div className="flex items-center space-x-1 text-xs text-gray-500 mt-2">
+                      <div className="mt-2 flex items-center space-x-1 text-xs text-gray-500 dark:text-slate-500">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -156,18 +158,18 @@ export default function FeedbackPanel({ messages = [], columnMaxHeightPx = null 
             ) : null}
           </div>
 
-          <div className="px-4 py-3 border-t border-gray-100 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gray-50/50">
-            <p className="text-xs text-gray-500 text-center sm:text-left">
+          <div className="flex shrink-0 flex-col gap-2 border-t border-gray-100 bg-gray-50/50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-center text-xs text-gray-500 dark:text-slate-400 sm:text-left">
               {index + 1} of {list.length}
-              <span className="hidden sm:inline text-gray-400"> · newest first</span>
+              <span className="hidden text-gray-400 sm:inline dark:text-slate-600"> · newest first</span>
             </p>
-            <div className="flex items-center justify-center sm:justify-end gap-1">
+            <div className="flex items-center justify-center gap-1 sm:justify-end">
               <button
                 type="button"
                 disabled={index <= 0}
                 aria-label="Newer feedback"
                 onClick={() => setIndex((i) => Math.max(0, i - 1))}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
               >
                 Previous
               </button>
@@ -176,7 +178,7 @@ export default function FeedbackPanel({ messages = [], columnMaxHeightPx = null 
                 disabled={index >= list.length - 1}
                 aria-label="Older feedback"
                 onClick={() => setIndex((i) => Math.min(list.length - 1, i + 1))}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
               >
                 Next
               </button>

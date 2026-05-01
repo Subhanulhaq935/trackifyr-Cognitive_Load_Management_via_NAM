@@ -25,7 +25,7 @@ export default function Header({ title, subtitle }) {
   }, [])
 
   return (
-    <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/50 sticky top-0 z-10">
+    <header className="sticky top-0 z-10 border-b border-gray-200/50 bg-white/80 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/85">
       <div className="px-4 sm:px-6 lg:px-8 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -35,9 +35,9 @@ export default function Header({ title, subtitle }) {
               </svg>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900 leading-tight">{title}</h1>
+              <h1 className="text-lg font-bold leading-tight text-gray-900 dark:text-slate-100">{title}</h1>
               {subtitle && (
-                <p className="text-sm text-gray-500 leading-tight">
+                <p className="text-sm leading-tight text-gray-500 dark:text-slate-400">
                   {subtitle}
                 </p>
               )}
@@ -45,8 +45,8 @@ export default function Header({ title, subtitle }) {
           </div>
           <div className="flex items-center space-x-3">
             <div className="hidden sm:block text-right">
-              <p className="text-xs text-gray-500 leading-tight">Pakistan time (PKT)</p>
-              <p className="text-base font-semibold text-gray-900 leading-tight">
+              <p className="text-xs leading-tight text-gray-500 dark:text-slate-400">Pakistan time (PKT)</p>
+              <p className="text-base font-semibold leading-tight text-gray-900 dark:text-slate-100">
                 {formatPktTimeShort(currentTime)}
               </p>
             </div>

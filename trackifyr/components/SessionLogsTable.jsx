@@ -52,17 +52,17 @@ export default function SessionLogsTable({
   const pageButtons = visiblePageNumbers(safePage, safeTotalPages)
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white/80 shadow-lg backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/85">
+      <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-5 dark:border-slate-700 dark:from-slate-800/80 dark:to-slate-900">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Session logs</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Session logs</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
               One row per 5-minute window (PKT-aligned). {SESSION_LOGS_ACTIVITY_SUBLINE} Cognitive load and engagement
               use averages of samples in that window only.
             </p>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
+          <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-slate-400">
             <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -74,37 +74,43 @@ export default function SessionLogsTable({
       </div>
       <div className="overflow-x-auto">
         {rows.length === 0 ? (
-          <div className="px-6 py-16 text-center text-gray-500 text-sm">No session logs yet — run the desktop app and ingest for a few minutes</div>
+          <div className="px-6 py-16 text-center text-sm text-gray-500 dark:text-slate-500">
+            No session logs yet. Run the desktop app and ingest for a few minutes
+          </div>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50/50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+            <thead className="bg-gray-50/50 dark:bg-slate-800/50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Time (5 min)</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-slate-300">
+                  Time (5 min)
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                   {ACTIVITY_PERCENT_LABEL}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                   Cognitive load
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                   Engagement
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Duration</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-slate-300">
+                  Duration
+                </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-slate-700 dark:bg-slate-900/40">
               {rows.map((session) => (
-                <tr key={session.id} className="hover:bg-indigo-50/50 transition-colors duration-150">
+                <tr key={session.id} className="transition-colors duration-150 hover:bg-indigo-50/50 dark:hover:bg-slate-800/60">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span className="text-sm font-medium text-gray-900">{session.time}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-slate-100">{session.time}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-semibold text-gray-800">{session.avgActivity ?? '—'}</span>
+                    <span className="text-sm font-semibold text-gray-800 dark:text-slate-200">{session.avgActivity ?? '—'}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -121,7 +127,7 @@ export default function SessionLogsTable({
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium text-gray-700">{session.duration}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{session.duration}</span>
                   </td>
                 </tr>
               ))}
@@ -130,8 +136,8 @@ export default function SessionLogsTable({
         )}
       </div>
       {total > 0 && typeof onPageChange === 'function' && safeTotalPages > 1 ? (
-        <div className="px-6 py-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 bg-gray-50/50">
-          <p className="text-xs text-gray-500">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/50 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/50">
+          <p className="text-xs text-gray-500 dark:text-slate-400">
             Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, total)} of {total}
           </p>
           <div className="flex flex-wrap items-center gap-1">
@@ -139,7 +145,7 @@ export default function SessionLogsTable({
               type="button"
               disabled={safePage <= 1}
               onClick={() => onPageChange(safePage - 1)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
             >
               Prev
             </button>
@@ -153,10 +159,10 @@ export default function SessionLogsTable({
                 key={p}
                 type="button"
                 onClick={() => onPageChange(p)}
-                className={`min-w-[2.25rem] px-2 py-1.5 text-sm rounded-lg border ${
+                className={`min-w-[2.25rem] rounded-lg border px-2 py-1.5 text-sm ${
                   p === safePage
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                    ? 'border-indigo-600 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500'
+                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
                 }`}
               >
                 {p}
@@ -171,7 +177,7 @@ export default function SessionLogsTable({
               type="button"
               disabled={safePage >= safeTotalPages}
               onClick={() => onPageChange(safePage + 1)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
             >
               Next
             </button>
