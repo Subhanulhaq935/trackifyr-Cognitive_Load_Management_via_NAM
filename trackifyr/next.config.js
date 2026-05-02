@@ -6,7 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  serverExternalPackages: ['pg'],
+  serverExternalPackages: ['pg', 'jspdf', 'jspdf-autotable'],
   // Next.js 16+: top-level `turbopack` (replaces experimental.turbo).
   turbopack: {
     root: __dirname,

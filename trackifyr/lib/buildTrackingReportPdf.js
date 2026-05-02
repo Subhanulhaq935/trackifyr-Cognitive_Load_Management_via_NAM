@@ -1,5 +1,6 @@
-'use client'
-
+/**
+ * Server-only PDF (jspdf). Used by POST /api/tracking/report-pdf only.
+ */
 import {
   ACTIVITY_DAY_AVG_LABEL,
   ACTIVITY_PERCENT_LABEL,
@@ -23,7 +24,6 @@ function countCognitiveLoads(rows) {
   return c
 }
 
-/** @param {import('jspdf').jsPDF} doc */
 function drawActivitySparkline(doc, x, y, w, h, chartPoints) {
   const scale = Math.max(1, ACTIVITY_SCALE_MAX)
   const loads = (chartPoints || []).map((p) =>
@@ -45,7 +45,6 @@ function drawActivitySparkline(doc, x, y, w, h, chartPoints) {
   doc.line(x, y + h, x + w, y + h)
 }
 
-/** @param {import('jspdf').jsPDF} doc */
 function drawCognitiveMixBars(doc, x, y, w, h, counts) {
   const order = ['Low', 'Medium', 'High']
   const colors = [
@@ -70,7 +69,6 @@ function drawCognitiveMixBars(doc, x, y, w, h, counts) {
   })
 }
 
-/** @param {import('jspdf').jsPDF} doc */
 function drawWeeklyBars(doc, x, y, w, h, weeklyRows) {
   const rows = Array.isArray(weeklyRows) ? weeklyRows : []
   if (!rows.length) return
@@ -112,7 +110,8 @@ function addFooter(doc, pageCount) {
   }
 }
 
-export async function downloadDailyPdf(payload) {
+/** @returns {Promise<Uint8Array>} */
+export async function buildDailyReportPdfBuffer(payload) {
   const { jsPDF, autoTable } = await loadPdfLibs()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const margin = 14
@@ -193,10 +192,11 @@ export async function downloadDailyPdf(payload) {
   )
 
   addFooter(doc, doc.getNumberOfPages())
-  doc.save(`trackifyr-daily-report-${payload.pktDateLabel || 'pkt'}.pdf`)
+  return new Uint8Array(doc.output('arraybuffer'))
 }
 
-export async function downloadWeeklyPdf(payload) {
+/** @returns {Promise<Uint8Array>} */
+export async function buildWeeklyReportPdfBuffer(payload) {
   const { jsPDF, autoTable } = await loadPdfLibs()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const margin = 14
@@ -209,7 +209,7 @@ export async function downloadWeeklyPdf(payload) {
   doc.setFontSize(10)
   doc.text(`User: ${payload.user?.fullName || '—'} · ${payload.user?.email || '—'}`, margin, y)
   y += 6
-  doc.text(`Rolling 7 PKT calendar days ending ${payload.pktDateLabel || '—'}`, margin, y)
+  doc.text(payload.weekRangeLabel || `Rolling 7 PKT calendar days ending ${payload.pktDateLabel || '—'}`, margin, y)
   y += 6
   doc.text(`Generated: ${payload.generatedAtPkt || '—'}`, margin, y)
   y += 8
@@ -257,5 +257,5 @@ export async function downloadWeeklyPdf(payload) {
   )
 
   addFooter(doc, doc.getNumberOfPages())
-  doc.save(`trackifyr-weekly-report-${payload.pktDateLabel || 'pkt'}.pdf`)
+  return new Uint8Array(doc.output('arraybuffer'))
 }

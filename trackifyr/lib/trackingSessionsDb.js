@@ -155,17 +155,17 @@ export async function countFiveMinuteBucketsForUser(userId) {
 }
 
 /**
- * Mean activity_load (0–100) across every ingest sample for the current PKT calendar day.
- * Uses the same sums as 5-minute buckets: SUM(sum_activity) / SUM(sample_count). Resets at 00:00 PKT.
+ * Mean activity_load (0–100) for the PKT calendar day containing `reference`.
  * @param {number} userId
+ * @param {Date} [reference]
  * @returns {Promise<number | null>}
  */
-export async function getTodayAverageActivityPercent(userId) {
+export async function getTodayAverageActivityPercent(userId, reference = new Date()) {
   if (!userId) return null
   await ensureTrackingBucketsTable()
-  const now = new Date()
-  const startUtc = pktStartOfCalendarDay(now)
-  const endUtc = pktEndOfCalendarDayExclusive(now)
+  const ref = reference instanceof Date && !Number.isNaN(reference.getTime()) ? reference : new Date()
+  const startUtc = pktStartOfCalendarDay(ref)
+  const endUtc = pktEndOfCalendarDayExclusive(ref)
   const r = await query(
     `
     SELECT
@@ -185,16 +185,17 @@ export async function getTodayAverageActivityPercent(userId) {
 }
 
 /**
- * All 5-minute buckets for the current PKT day, ascending — for the cognitive load chart.
+ * All 5-minute buckets for the PKT calendar day containing `reference`, ascending — for charts.
  * @param {number} userId
+ * @param {Date} [reference]
  * @returns {Promise<Array<{ time: string, load: number, engagementTier: number }>>}
  */
-export async function listTodayBucketsForChart(userId) {
+export async function listTodayBucketsForChart(userId, reference = new Date()) {
   if (!userId) return []
   await ensureTrackingBucketsTable()
-  const now = new Date()
-  const startUtc = pktStartOfCalendarDay(now)
-  const endUtc = pktEndOfCalendarDayExclusive(now)
+  const ref = reference instanceof Date && !Number.isNaN(reference.getTime()) ? reference : new Date()
+  const startUtc = pktStartOfCalendarDay(ref)
+  const endUtc = pktEndOfCalendarDayExclusive(ref)
   const r = await query(
     `
     SELECT
@@ -278,15 +279,16 @@ export async function listFiveMinuteSessionsForUser(userId, limit = SESSION_LOG_
 }
 
 /**
- * All 5-minute buckets for the current PKT day, ascending — for PDF / full-day export.
+ * All 5-minute buckets for the PKT calendar day containing `reference`, ascending — for reports / PDF.
  * @param {number} userId
+ * @param {Date} [reference]
  */
-export async function listPktDayBucketsAscendingForReport(userId) {
+export async function listPktDayBucketsAscendingForReport(userId, reference = new Date()) {
   if (!userId) return []
   await ensureTrackingBucketsTable()
-  const now = new Date()
-  const startUtc = pktStartOfCalendarDay(now)
-  const endUtc = pktEndOfCalendarDayExclusive(now)
+  const ref = reference instanceof Date && !Number.isNaN(reference.getTime()) ? reference : new Date()
+  const startUtc = pktStartOfCalendarDay(ref)
+  const endUtc = pktEndOfCalendarDayExclusive(ref)
   const r = await query(
     `
     SELECT
@@ -385,6 +387,75 @@ export async function listRollingDailyAggregatesForUser(userId, days = WEEKLY_RO
   const out = []
   for (let i = nDays - 1; i >= 0; i--) {
     const dayInstant = new Date(todayStart.getTime() - i * 24 * 60 * 60 * 1000)
+    const key = formatPktIsoDate(dayInstant)
+    const agg = byDay.get(key)
+    out.push({
+      day: formatPktWeekdayLabel(dayInstant),
+      engagement: agg?.avgEngagement ?? 0,
+      sessions: agg?.sessions ?? 0,
+      avgActivity: agg?.avgActivity ?? 0,
+    })
+  }
+  return out
+}
+
+/**
+ * Seven PKT calendar days Mon–Sun starting at `mondayPktStart` (PKT Monday 00:00).
+ * @param {number} userId
+ * @param {Date} mondayPktStart
+ * @returns {Promise<Array<{ day: string, engagement: number, sessions: number, avgActivity: number }>>}
+ */
+export async function listPktWeekDailyAggregatesForUser(userId, mondayPktStart) {
+  await ensureTrackingBucketsTable()
+  if (!userId || !(mondayPktStart instanceof Date) || Number.isNaN(mondayPktStart.getTime())) return []
+
+  const startUtc = mondayPktStart
+  const endUtc = new Date(mondayPktStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+  const r = await query(
+    `
+    SELECT
+      (bucket_start AT TIME ZONE 'Asia/Karachi')::date AS day_date,
+      SUM(sample_count)::bigint AS total_samples,
+      SUM(sum_activity)::double precision AS sum_act,
+      SUM(sum_engagement_score)::double precision AS sum_eng,
+      SUM(engagement_sample_count)::bigint AS total_eng_samples,
+      COUNT(*)::int AS bucket_count
+    FROM tracking_five_minute_buckets
+    WHERE user_id = $1
+      AND bucket_start >= $2::timestamptz
+      AND bucket_start < $3::timestamptz
+    GROUP BY 1
+    ORDER BY 1 ASC
+  `,
+    [userId, startUtc.toISOString(), endUtc.toISOString()],
+  )
+
+  const byDay = new Map()
+  for (const row of r.rows) {
+    const raw = row.day_date
+    const key =
+      raw instanceof Date
+        ? raw.toISOString().slice(0, 10)
+        : String(raw).length >= 10
+          ? String(raw).slice(0, 10)
+          : ''
+    if (!key) continue
+    const samples = Number(row.total_samples) || 0
+    const sumAct = Number(row.sum_act) || 0
+    const sumEng = Number(row.sum_eng) || 0
+    const engSamples = Number(row.total_eng_samples) || 0
+    const buckets = Number(row.bucket_count) || 0
+    byDay.set(key, {
+      avgActivity: samples > 0 ? Math.round(sumAct / samples) : 0,
+      avgEngagement: engSamples > 0 ? Math.round(sumEng / engSamples) : 0,
+      sessions: buckets,
+    })
+  }
+
+  const out = []
+  for (let i = 0; i < 7; i++) {
+    const dayInstant = new Date(mondayPktStart.getTime() + i * 24 * 60 * 60 * 1000)
     const key = formatPktIsoDate(dayInstant)
     const agg = byDay.get(key)
     out.push({

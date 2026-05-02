@@ -54,6 +54,11 @@ export default function CognitiveLoadCharts({
   loadSeries = [],
   dailySeries = [],
   hasWeeklyData: hasWeeklyDataProp,
+  intradayTitle = 'Cognitive load (today)',
+  intradaySubtitle = `${ACTIVITY_PERCENT_LABEL} (5-minute bucket mean, same 0–${ACTIVITY_SCALE_MAX} scale as live) and webcam-based engagement (Low → High) where ML samples exist: current PKT day`,
+  weeklyTitle = 'Weekly aggregates',
+  weeklySubtitle = `Rolling 7 PKT calendar days: mean ${ACTIVITY_PERCENT_LABEL} per day (same 0–${ACTIVITY_SCALE_MAX} samples as session logs) and number of 5-minute windows with data. Updates while you ingest`,
+  noIntradayMessage = 'No 5-minute data for today (PKT) yet. Run the desktop app to record activity; past buckets stay visible after you close it',
 }) {
   const { resolvedDark } = useTheme()
   const palette = useMemo(() => getChartPalette(resolvedDark), [resolvedDark])
@@ -76,11 +81,8 @@ export default function CognitiveLoadCharts({
       <div className={cardShell}>
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Cognitive load (today)</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-              {ACTIVITY_PERCENT_LABEL} (5-minute bucket mean, same 0–{ACTIVITY_SCALE_MAX} scale as live) and
-              webcam-based engagement (Low → High) where ML samples exist: current PKT day
-            </p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">{intradayTitle}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{intradaySubtitle}</p>
           </div>
         </div>
         {!hasLoad ? (
@@ -88,8 +90,7 @@ export default function CognitiveLoadCharts({
             className="flex items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 text-center text-sm text-gray-500 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
             style={{ minHeight: CHART_HEIGHT }}
           >
-            No 5-minute data for today (PKT) yet. Run the desktop app to record activity; past buckets stay visible after
-            you close it
+            {noIntradayMessage}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
@@ -165,17 +166,14 @@ export default function CognitiveLoadCharts({
 
       {!hasDaily ? (
         <EmptyChart
-          title="Weekly aggregates"
-          subtitle="Ingest tracking for a few minutes: 5-minute buckets roll up into the last 7 PKT days here"
+          title={weeklyTitle}
+          subtitle="Ingest tracking for a few minutes: 5-minute buckets roll up into the selected PKT days here"
         />
       ) : (
         <div className={cardShell}>
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Weekly aggregates</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-              Rolling 7 PKT calendar days: mean {ACTIVITY_PERCENT_LABEL} per day (same 0–{ACTIVITY_SCALE_MAX} samples as
-              session logs) and number of 5-minute windows with data. Updates while you ingest
-            </p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">{weeklyTitle}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{weeklySubtitle}</p>
           </div>
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <BarChart data={dailySeries}>

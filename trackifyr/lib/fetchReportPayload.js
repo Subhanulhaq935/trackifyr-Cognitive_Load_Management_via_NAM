@@ -1,9 +1,13 @@
 /**
- * Report JSON for PDF export — kept separate from jspdf so the reports page
- * does not statically import the jspdf/canvg chain (avoids broken core-js in some installs).
+ * Report JSON for the reports UI. PDFs use `/api/tracking/report-pdf`.
+ * @param {'daily'|'weekly'} period
+ * @param {{ date?: string, week?: string }} [opts] PKT `YYYY-MM-DD`: daily day, or any day in the target Mon–Sun week
  */
-export async function fetchReportPayload(period) {
-  const res = await fetch(`/api/tracking/report?period=${period}`, {
+export async function fetchReportPayload(period, opts = {}) {
+  const q = new URLSearchParams({ period })
+  if (opts.date && period === 'daily') q.set('date', String(opts.date).trim())
+  if (opts.week && period === 'weekly') q.set('week', String(opts.week).trim())
+  const res = await fetch(`/api/tracking/report?${q.toString()}`, {
     cache: 'no-store',
     credentials: 'same-origin',
   })

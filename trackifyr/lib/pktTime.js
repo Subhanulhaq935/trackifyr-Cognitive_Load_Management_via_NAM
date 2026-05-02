@@ -56,6 +56,36 @@ export function formatPktIsoDate(date = new Date()) {
   return `${y}-${m}-${day}`
 }
 
+/** @param {string} ymd `YYYY-MM-DD` (PKT calendar day) */
+export function pktInstantFromYmd(ymd) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ymd || '').trim())) return null
+  const s = String(ymd).trim()
+  const dt = new Date(`${s}T00:00:00+05:00`)
+  if (Number.isNaN(dt.getTime())) return null
+  if (formatPktIsoDate(dt) !== s) return null
+  return dt
+}
+
+function pktWeekdayShortKarachi(date) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: PKT_TIMEZONE,
+    weekday: 'short',
+  }).format(date)
+}
+
+/**
+ * PKT Monday 00:00 of the week that contains `anyInstant` (Mon–Sun in Asia/Karachi).
+ * @param {Date} anyInstant
+ */
+export function pktMondayStartOfWeekContaining(anyInstant = new Date()) {
+  const dayStart = pktStartOfCalendarDay(anyInstant)
+  const wd = pktWeekdayShortKarachi(dayStart)
+  const daysBack = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 }
+  const sub = daysBack[wd]
+  if (sub == null) return dayStart
+  return new Date(dayStart.getTime() - sub * 24 * 60 * 60 * 1000)
+}
+
 /**
  * 5-minute bucket start (UTC ms), aligned to :00, :05, … in PKT wall clock.
  */
